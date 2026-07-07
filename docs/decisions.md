@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-08 [§12-6] 柱2 `packages/gov-clients` をgit subtreeで `packages/jp-corp-core/` に初回取込み（取込元HEAD 7210ce0・split 7adc09f、記録はpackages/jp-corp-core/SYNC.md）。ただし**houjin/gbizinfoクライアントは柱2側Phase2/3で未実装**のため現内容はhttp.ts＋edinet＋houjin fixturesのみ。柱2のworkspace依存が解決不能なためpnpm workspaceには未組込み（backend利用開始時に依存subtree追加かnpm公開待ちかを決定）。
+
 - 2026-07-08 [§12-5] 安定ユーザーキー方式を暫定確定: ①`getActiveUser().getEmail()`非空→`em:`+SHA-256(小文字化email+Script Properties`USER_KEY_SALT`) ②空→UserPropertiesに初回生成UUID（`up:`） ③例外時のみ`tmp:`+`getTemporaryActiveUserKey()`（約30日ローテの劣化モード・最悪でも無料枠の早期回復に留まる）。openid/`getIdentityToken()`はCR-7スコープ3点固定のため不使用。実機検証はclasp疎通後に`debugUserKeyProbe()`で実施しここに結果を追記（TODO）。
 
 - 2026-07-07 [§12-3] 独自ドメインは購入操作が必要なため未取得（TODO: docs/setup/domain-pages.mdの手順で取得→web/CNAME追加→Search Console確認）。LP/PP/ToS/特商法の骨格はweb/に作成しGitHub Pagesワークフローで公開可能な状態。運営者名・問い合わせ先等はTODOプレースホルダ。
