@@ -1,5 +1,7 @@
 node_modules/
 dist/
+apps-script/dist/
+.clasp.json
 .env
 .env.*
 backend/.env

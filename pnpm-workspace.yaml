@@ -1,0 +1,7 @@
+# backend/ と packages/ は後続Phase（P1）で追加する。
+packages:
+  - "apps-script"
+
+# esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
+onlyBuiltDependencies:
+  - esbuild

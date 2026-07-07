@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+          Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        color: #202124;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      header h1 {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      header p {
+        margin: 0 0 16px;
+        color: #5f6368;
+        font-size: 12px;
+      }
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 4px;
+        background: #1a73e8;
+        color: #fff;
+        padding: 8px 16px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #a9c7f5;
+        cursor: default;
+      }
+      #result {
+        margin-top: 16px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background: #f1f3f4;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-height: 1.6em;
+      }
+      #result.error {
+        background: #fce8e6;
+        color: #c5221f;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>会社リストクリーナー</h1>
+      <p>取引先リストの正規化・法人番号付与ツール（疎通確認モード）</p>
+    </header>
+
+    <button id="hello-btn" type="button">Hello</button>
+    <div id="result" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        var btn = document.getElementById('hello-btn');
+        var result = document.getElementById('result');
+
+        function show(message, isError) {
+          result.textContent = message;
+          if (isError) {
+            result.classList.add('error');
+          } else {
+            result.classList.remove('error');
+          }
+        }
+
+        btn.addEventListener('click', function () {
+          btn.disabled = true;
+          show('サーバーに問い合わせ中…', false);
+          google.script.run
+            .withSuccessHandler(function (message) {
+              show(message, false);
+              btn.disabled = false;
+            })
+            .withFailureHandler(function (error) {
+              show('エラー: ' + (error && error.message ? error.message : error), true);
+              btn.disabled = false;
+            })
+            .sayHello();
+        });
+      })();
+    </script>
+  </body>
+</html>
