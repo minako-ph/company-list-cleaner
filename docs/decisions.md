@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-07 [§12-3] 独自ドメインは購入操作が必要なため未取得（TODO: docs/setup/domain-pages.mdの手順で取得→web/CNAME追加→Search Console確認）。LP/PP/ToS/特商法の骨格はweb/に作成しGitHub Pagesワークフローで公開可能な状態。運営者名・問い合わせ先等はTODOプレースホルダ。
+
 - 2026-07-07 [§12-2] gcloud未導入・GCPコンソール操作は自動化不可→手順をdocs/setup/gcp-oauth.mdにチェックリスト化（スコープ3点をCR-7として明記）。プロジェクト作成〜テストモード設定は手動実施（TODO）。
 
 - 2026-07-07 [§12-1] 検証環境: 令和3年10月より提供・アプリIDは本番/検証共用（利用手続書§7）。検証環境の接続先URLは公開仕様書に非掲載→ID発行時の案内メールで確認しdecisions.mdに追記（TODO）。`INVOICE_API_BASE`は環境変数で切替。

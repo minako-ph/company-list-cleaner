@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>会社リストクリーナー — インボイス登録確認・法人番号付与 for Google Sheets</title>
+  <meta name="description" content="取引先リストの社名を正規化し、法人番号・住所・業種を自動付与。適格請求書（インボイス）発行事業者の登録状況も登録番号で一括確認。国税庁・gBizINFOの公式データのみ使用、結果はあなたのシートにだけ保存されます。">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="site-title">会社リストクリーナー for Google Sheets</p>
+      <nav class="site-nav">
+        <a href="#pricing">料金</a>
+        <a href="#faq">FAQ</a>
+        <a href="#cta">導入する</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 統一メッセージ（marketing.md §4） -->
+  <div class="hero">
+    <div class="wrap">
+      <h1>取引先リストの整備を、<br>スプレッドシートから出ずに。</h1>
+      <p class="lead">
+        社名の表記ゆれ統一・法人番号の自動付与・インボイス登録の一括確認を、公式データだけで。
+        経理・営業担当の方の「取引先リスト整備」を、Google スプレッドシート上でそのまま解決します。
+      </p>
+    </div>
+  </div>
+
+  <main>
+    <!-- デモ（30秒デモGIFプレースホルダ） -->
+    <section>
+      <div class="wrap">
+        <h2>30秒でわかる動き</h2>
+        <div class="demo-placeholder">
+          デモGIF（プレースホルダ）<br>
+          <!-- TODO: 30秒デモGIFを web/assets/ に配置し img で差し替える -->
+          汚い取引先リスト → 正規化 → 法人番号・住所・業種を付与 → インボイス登録状況を確認
+        </div>
+        <p style="font-size:0.9rem;color:var(--fg-muted);">
+          動作の流れ: 社名を正規化 → 法人番号を自動付与 → 付与された登録番号（T＋13桁）で
+          インボイス登録状況を照会します。社名から直接インボイス登録を検索するものではありません。
+        </p>
+      </div>
+    </section>
+
+    <!-- 差別化3本柱（marketing.md §4） -->
+    <section>
+      <div class="wrap">
+        <h2>3つの特長</h2>
+        <div class="pillars">
+          <div class="pillar">
+            <h3>公式データのみ</h3>
+            <p>国税庁（法人番号・インボイス公表情報）と経済産業省 gBizINFO のみを使用。推測や外部DBの継ぎ接ぎではありません。</p>
+          </div>
+          <div class="pillar">
+            <h3>保存しない設計</h3>
+            <p>照会結果はあなたのシートにだけ書き込まれ、運営側サーバには保存されません（国税庁への届出内容そのまま）。</p>
+          </div>
+          <div class="pillar">
+            <h3>シートから出ない</h3>
+            <p>エクスポート → 別ツール → 再取込のループが不要。経理・営業の月次動線にそのまま入ります。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 正直明記3点（marketing.md §4・必須） -->
+    <section class="honest">
+      <div class="wrap">
+        <h2>正直にお伝えする3点</h2>
+        <ul>
+          <li>個人事業主の取引先は、登録番号（T番号）がリストにある場合のみ照会可能です。個人事業主の登録番号は法人番号から導き出せないためです。</li>
+          <li>企業情報の付与範囲は gBizINFO の収録分（約400万法人）です。国内の全法人を網羅（悉皆）するものではありません。</li>
+          <li>本サービスは、国税庁・経済産業省の保証を受けたものではありません（各データの出典指定文言は本ページ下部に掲載しています）。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 料金 -->
+    <section id="pricing">
+      <div class="wrap">
+        <h2>料金</h2>
+        <div class="plans">
+          <div class="plan">
+            <h3>Free</h3>
+            <p class="price">¥0</p>
+            <p>月50行まで。全機能を利用できます（量の制限のみ）。小規模なら無料で完結します。</p>
+          </div>
+          <div class="plan pro">
+            <h3>Pro</h3>
+            <p class="price">¥1,480 <small>/ 月（税込）</small></p>
+            <p>月10,000行までのフェアユース上限。上限を超える場合は個別にご相談ください。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ 5問 -->
+    <section id="faq">
+      <div class="wrap">
+        <h2>よくある質問</h2>
+        <dl class="faq">
+          <dt>T番号がない個人事業主の取引先は確認できますか？</dt>
+          <dd>登録番号（T番号）がリストにある場合のみ照会できます。個人事業主の登録番号は法人番号から導出できないため、社名からの自動付与はできません。</dd>
+
+          <dt>データはどこに保存されますか？</dt>
+          <dd>照会結果はあなたのスプレッドシートにだけ書き込まれます。公表情報を運営側サーバに保存することはありません（都度取得・都度破棄）。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</dd>
+
+          <dt>何件まで処理できますか？</dt>
+          <dd>Free プランは月50行まで、Pro プランは月10,000行まで（フェアユース上限）です。サイドバーに当月の使用量と残数を常時表示します。</dd>
+
+          <dt>解約方法は？</dt>
+          <dd>Stripe のカスタマーポータルからいつでも解約できます。解約後は次回更新日以降、Free プランに戻ります。</dd>
+
+          <dt>対応しているシートは？</dt>
+          <dd>Google スプレッドシートに対応しています（エディタアドオンとして動作）。Microsoft Excel やスタンドアロンWebアプリには対応していません。</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- Marketplaceボタン -->
+    <section id="cta" class="cta">
+      <div class="wrap">
+        <h2>導入する</h2>
+        <p>Google Workspace Marketplace からインストールできます。</p>
+        <!-- TODO: Marketplace掲載後に実URLへ差し替える -->
+        <p><a class="btn" href="#">Marketplace で入手（TODO: 掲載後にURL設定）</a></p>
+      </div>
+    </section>
+
+    <!-- 出典指定文言（handover §8 verbatim・専用セクション） -->
+    <section class="sources">
+      <div class="wrap">
+        <h2>出典・注記</h2>
+        <p>このサービスは、国税庁適格請求書発行事業者公表システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+        <p>このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+        <p>出典：経済産業省 Gビズインフォ</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav>
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      </nav>
+      <p>&copy; <span>TODO: 運営者名</span> 会社リストクリーナー</p>
+    </div>
+  </footer>
+</body>
+</html>

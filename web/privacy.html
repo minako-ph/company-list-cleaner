@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プライバシーポリシー — 会社リストクリーナー for Google Sheets</title>
+  <meta name="description" content="会社リストクリーナーのプライバシーポリシー。送信データ・公表情報の非保存・アクセスログ・OAuthスコープ・決済情報の取扱いについて。">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="site-title"><a href="index.html" style="text-decoration:none;color:inherit;">会社リストクリーナー for Google Sheets</a></p>
+      <nav class="site-nav">
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特商法表記</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="doc">
+    <div class="wrap">
+      <h1>プライバシーポリシー</h1>
+      <p class="updated">最終更新日: <span class="todo">TODO: 公開日</span></p>
+
+      <p>
+        本ポリシーは、Google スプレッドシート用アドオン「会社リストクリーナー」（以下「本サービス」）における
+        利用者情報の取扱いを定めます。本サービスは、国税庁および経済産業省の公式APIを利用して取引先リストを整備するツールです。
+      </p>
+
+      <h2>1. 本サービスがシートから送信するデータ</h2>
+      <p>
+        本サービスがお客様のスプレッドシートから外部（運営バックエンド）へ送信するのは、
+        <strong>お客様が指定した列の値（社名・法人番号・登録番号）のみ</strong>です。
+        指定列以外のセルの内容を読み取ることも、送信することもありません。
+      </p>
+
+      <h2>2. 公表情報を保存しない設計</h2>
+      <p>
+        国税庁（法人番号・適格請求書発行事業者公表システム）および gBizINFO から取得した公表情報は、
+        <strong>運営側のサーバ・データベースに保存しません</strong>（都度取得・都度破棄）。
+        取得した情報の書き込み先は、<strong>お客様ご自身のスプレッドシートのみ</strong>です。
+      </p>
+
+      <h2>3. アクセスログ</h2>
+      <p>
+        公的APIへの照会にあたり、運営側で記録するアクセスログは、以下の<strong>3点のみ</strong>です。
+        社名や照会結果（公表情報の内容）はログに残しません。
+      </p>
+      <ul>
+        <li>利用者ID（お客様を識別するための内部キー）</li>
+        <li>取得日時</li>
+        <li>照会した登録番号</li>
+      </ul>
+
+      <h2>4. OAuthで取得する権限（スコープ）と用途</h2>
+      <p>本サービスが Google に要求する権限は、以下の3点のみです。これ以外の権限（Gmail・Drive 等）は要求しません。</p>
+      <table class="info-table">
+        <tr>
+          <th>現在のスプレッドシートの参照・編集<br>(spreadsheets.currentonly)</th>
+          <td>お客様が開いているスプレッドシートの指定列を読み取り、結果を新規列として書き込むため。他のスプレッドシートにはアクセスしません。</td>
+        </tr>
+        <tr>
+          <th>外部サービスへの接続<br>(script.external_request)</th>
+          <td>公的API照会・ライセンス検証のため、運営バックエンド（送信先を固定）へ通信するため。</td>
+        </tr>
+        <tr>
+          <th>サイドバー等のUI表示<br>(script.container.ui)</th>
+          <td>操作用のサイドバーUIを表示するため。</td>
+        </tr>
+      </table>
+
+      <h2>5. 決済情報（Stripe）の取扱い</h2>
+      <p>
+        有料プランの決済は Stripe を利用します。クレジットカード番号等の決済情報は Stripe が管理し、
+        <strong>運営側でカード情報を保持・保存することはありません</strong>。運営側が Stripe から受け取り保持するのは、
+        ライセンスキーと購読状態を紐付けるための識別子（顧客ID等）に限られます。
+      </p>
+
+      <h2>6. 無料枠カウントのための利用量データ</h2>
+      <p>
+        無料枠（月50行）の管理のため、利用者IDごとに当月の処理行数を記録します。これは利用量のデータであり、
+        公表情報（照会結果の内容）を含みません。
+      </p>
+
+      <h2>7. 第三者提供</h2>
+      <p>
+        法令に基づく場合を除き、お客様の情報を第三者に提供しません。公的API（国税庁・gBizINFO）および決済事業者（Stripe）への
+        必要な通信は、本サービスの提供に不可欠な範囲で行います。
+      </p>
+
+      <h2>8. お問い合わせ先</h2>
+      <p><span class="todo">TODO: 問い合わせ先メールアドレス／フォームURL</span></p>
+
+      <h2>9. 改定</h2>
+      <p>本ポリシーは必要に応じて改定することがあります。重要な変更がある場合は本ページで告知します。</p>
+
+      <hr>
+      <div class="sources">
+        <p>このサービスは、国税庁適格請求書発行事業者公表システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+        <p>このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+        <p>出典：経済産業省 Gビズインフォ</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav>
+        <a href="index.html">トップ</a>
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      </nav>
+      <p>&copy; <span>TODO: 運営者名</span> 会社リストクリーナー</p>
+    </div>
+  </footer>
+</body>
+</html>
