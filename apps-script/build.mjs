@@ -16,7 +16,7 @@ const GLOBAL_NAME = 'AppsScriptEntry';
 
 // GAS から呼び出される（トリガー・google.script.run の対象となる）エントリポイント。
 // main.ts の export と一致させること。
-const ENTRY_POINTS = ['onOpen', 'onInstall', 'showSidebar', 'sayHello', 'processBatch'];
+const ENTRY_POINTS = ['onOpen', 'onInstall', 'showSidebar', 'sayHello', 'processBatch', 'debugUserKeyProbe'];
 
 // バンドルされた module の export を参照するトップレベル関数スタブ。
 // 任意アリティに対応するため rest/apply を使う。

@@ -6,6 +6,13 @@
  * OAuth スコープは appsscript.json の3点固定（CR-7）。
  */
 
+/**
+ * §12-5 実機検証用エントリポイント。GAS エディタから手動実行し（サイドバー UI からは
+ * 呼ばない）、出力 JSON を docs/decisions.md へ反映して安定ユーザーキー方式を確定する。
+ * 検証完了後、P1 で quota 実装（無料枠カウント）に統合する。
+ */
+export { debugUserKeyProbe } from './userKey';
+
 const PRODUCT_NAME = '会社リストクリーナー';
 const MENU_TITLE = PRODUCT_NAME;
 const SIDEBAR_TITLE = PRODUCT_NAME;

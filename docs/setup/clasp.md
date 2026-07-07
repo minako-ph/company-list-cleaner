@@ -25,6 +25,9 @@
 - [ ] メニュー「会社リストクリーナー」→「サイドバーを開く」でサイドバーが開くことを確認
 - [ ] サイドバーの「Hello」ボタンを押し、`sayHello()` の結果（シート名を含む挨拶）が表示されることを確認
       → これで GAS ⇄ サイドバー（`google.script.run`）の疎通が確認できる（P0 DoD の "Hello" 動作）
+- [ ] §12-5検証: GAS エディタで `debugUserKeyProbe` を実行し、出力 JSON を docs/decisions.md に反映
+      （`activeUserEmail` 有無で方式①（em:）／②（up:）のどちらが主経路になるか確認。
+       事前に Script Properties へ `USER_KEY_SALT` を設定しておくと em: 経路のハッシュ生成まで確認できる）
 
 ## 注意
 
