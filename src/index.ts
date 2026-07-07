@@ -19,6 +19,11 @@ export function loadTextFixture(fixturesDir: string, name: string): string {
   return readFileSync(join(fixturesDir, name), 'utf-8');
 }
 
+/** fixtureディレクトリからバイナリ（zip/Shift_JIS CSV等）を読む */
+export function loadBinaryFixture(fixturesDir: string, name: string): Uint8Array {
+  return new Uint8Array(readFileSync(join(fixturesDir, name)));
+}
+
 export class GoldenMismatchError extends Error {}
 export class GoldenMissingError extends Error {}
 
