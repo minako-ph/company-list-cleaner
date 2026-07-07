@@ -7,11 +7,16 @@ import { GovHttpClient, type FetchLike } from '../src/http.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'edinet');
 
-function clientWithBody(body: string) {
+function clientWithBody(body: string | Uint8Array) {
   const urls: string[] = [];
+  const bytes = typeof body === 'string' ? new TextEncoder().encode(body) : new Uint8Array(body);
   const fetchFn: FetchLike = async (url) => {
     urls.push(url);
-    return { status: 200, text: async () => body };
+    return {
+      status: 200,
+      text: async () => new TextDecoder().decode(bytes),
+      arrayBuffer: async () => bytes.buffer,
+    };
   };
   const http = new GovHttpClient({ intervalMs: 0, fetchFn });
   return { client: new EdinetClient({ apiKey: 'test-key', http }), urls };

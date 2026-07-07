@@ -12,7 +12,11 @@ function fakeFetchFactory(responses: Array<{ status: number; body: string }>) {
     calls.push(url);
     const next = responses.shift();
     if (!next) throw new Error('応答スタブが枯渇');
-    return { status: next.status, text: async () => next.body };
+    return {
+      status: next.status,
+      text: async () => next.body,
+      arrayBuffer: async () => new TextEncoder().encode(next.body).buffer,
+    };
   };
   return { calls, fetchFn };
 }

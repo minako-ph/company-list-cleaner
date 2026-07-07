@@ -73,6 +73,27 @@ export class EdinetClient {
     return { documents: value.results ?? [], drift, publicUrl };
   }
 
-  // TODO(Phase 1): getDocument(docId, type=5) — CSV(財務値ソース)・PDF・XBRL zipのバイナリ取得。
-  // GovHttpClientにバイナリ応答対応を足してから実装する。
+  /**
+   * 書類取得（1=XBRL zip, 2=PDF, 5=CSV zip←財務値ソース）。
+   * 正常時はバイナリ（zip/PDF）、エラー時はJSONが返るためボディ先頭で判別する。
+   */
+  async fetchDocument(docId: string, type: 1 | 2 | 5): Promise<Uint8Array> {
+    const publicUrl = `${this.baseUrl}/documents/${docId}?type=${type}`;
+    const response = await this.http.getBinary(`${publicUrl}&Subscription-Key=${this.apiKey}`);
+    // zipは'PK'(0x50)、PDFは'%'(0x25)始まり。'{'(0x7b)ならエラーJSON
+    if (response.body[0] === 0x7b) {
+      const parsed: unknown = JSON.parse(new TextDecoder().decode(response.body));
+      const asError = edinetErrorSchema.safeParse(parsed);
+      if (asError.success) {
+        throw new EdinetApiError(asError.data.StatusCode, asError.data.message);
+      }
+      throw new EdinetApiError(0, `unexpected JSON response for document ${docId}`);
+    }
+    return response.body;
+  }
+
+  /** 実行終端の監視集計（N-4）用にHTTP統計を公開する */
+  getHttpStats(): ReturnType<GovHttpClient['getStats']> {
+    return this.http.getStats();
+  }
 }

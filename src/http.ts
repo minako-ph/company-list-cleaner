@@ -34,11 +34,22 @@ export interface GovHttpResponse {
   body: string;
 }
 
+export interface GovHttpBinaryResponse {
+  status: number;
+  body: Uint8Array;
+}
+
+interface FetchLikeResponse {
+  status: number;
+  text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
 /** fetch互換の最小注入面（テストでアサーションなしにスタブ可能にするため構造的に定義） */
 export type FetchLike = (
   url: string,
   init?: { headers?: Record<string, string> },
-) => Promise<{ status: number; text(): Promise<string> }>;
+) => Promise<FetchLikeResponse>;
 
 export interface GovHttpClientOptions {
   /** リクエスト間の最小間隔（源別既定。EDINET/不動産/法人番号/法令=1000ms、gBizINFO=500ms） */
@@ -87,19 +98,30 @@ export class GovHttpClient {
     return { ...this.stats };
   }
 
-  /** 直列＋間隔＋バックオフ付きGET。4xx/5xxはHttpStatusErrorで返す（404の0件扱い等は呼び出し側の責務） */
+  /** 直列＋間隔＋バックオフ付きGET（テキスト応答）。4xx/5xxはHttpStatusError（404の0件扱い等は呼び出し側の責務） */
   async get(url: string): Promise<GovHttpResponse> {
+    const response = await this.enqueue(url);
+    return { status: response.status, body: await response.text() };
+  }
+
+  /** 直列＋間隔＋バックオフ付きGET（バイナリ応答。EDINETのzip/PDF等） */
+  async getBinary(url: string): Promise<GovHttpBinaryResponse> {
+    const response = await this.enqueue(url);
+    return { status: response.status, body: new Uint8Array(await response.arrayBuffer()) };
+  }
+
+  private enqueue(url: string): Promise<FetchLikeResponse> {
     const run = this.queue.then(() => this.executeWithBackoff(url));
     // キューはエラーでも途切れさせない（部分失敗の許容 FR-C8）
     this.queue = run.catch(() => undefined);
     return run;
   }
 
-  private async executeWithBackoff(url: string): Promise<GovHttpResponse> {
+  private async executeWithBackoff(url: string): Promise<FetchLikeResponse> {
     for (let attempt = 0; ; attempt++) {
       await this.waitInterval();
       this.stats.requests++;
-      let response: { status: number; text(): Promise<string> };
+      let response: FetchLikeResponse;
       try {
         response = await this.fetchFn(url, { headers: this.headers });
       } catch (error) {
@@ -120,12 +142,11 @@ export class GovHttpClient {
         continue;
       }
 
-      const body = await response.text();
       if (response.status >= 400) {
         this.stats.failures++;
         throw new HttpStatusError(response.status, url);
       }
-      return { status: response.status, body };
+      return response;
     }
   }
 
