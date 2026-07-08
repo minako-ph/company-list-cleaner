@@ -11,8 +11,19 @@ Hono + TypeScript（ESM）。GAS アドオンからの HTTPS を受け、公的A
 - `POST /invoice`（FR-5・`src/routes/invoice.ts` + `src/clients/invoice.ts`）: 登録番号（`T＋13桁`）のみで
   インボイス登録状況を照会（CR-1/2）。`INVOICE_ENABLED=false` のときは 503 `{ error: 'invoice_disabled' }`
   で明示応答（縮退公開）。応答は保存・ログせず呼び出し元へ返す（CR-3）。照会番号ごとに CR-5 の3点ログのみ。
+- `GET /usage?userKey=...` / `POST /usage/consume`（FR-9・`src/routes/usage.ts` + `src/services/quota.ts`）:
+  無料枠カウント。Firestore に保存するのは利用量データ（`rows_used`）のみで、公表情報・社名は
+  一切保存しない（CR-3）。月次リセットはドキュメントキー `{user_key}:{YYYY-MM}`（JST基準）で実現。
+  consume の `rows` は 1〜50 の整数、超過時は消費せず `allowed: false` を返す。plan は本 Step では
+  `'free'` 固定（Pro 判定は Step5）。
 
-残りの業務ルート（`/resolve` `/enrich` `/license` `/usage` `/stripe/webhook`）は後続 Step で `src/routes/` 配下に追加する。
+  **Firestore フォールバック**: `FIRESTORE_PROJECT_ID`（無ければ `GOOGLE_CLOUD_PROJECT`）が空の
+  ローカル開発では、Firestore に接続せず **InMemory ストア**（プロセス内・再起動で消える）に
+  自動フォールバックする。Cloud Run 本番はこのいずれかを設定し、認証は ADC で自動接続する
+  （キーはコード・環境変数に埋めない = §9）。
+
+残りの業務ルート（`/resolve` `/enrich` `/license` `/stripe/webhook`）のうち `/resolve` `/enrich` は実装済み、
+`/license` `/stripe/webhook` は後続 Step で `src/routes/` 配下に追加する。
 
 ## スクリプト
 
@@ -34,7 +45,8 @@ pnpm --filter backend dev         # node --env-file=.env --experimental-strip-ty
 主なもの: `HOUJIN_APP_ID` / `INVOICE_API_BASE` / `INVOICE_ENABLED`(既定 false) / `GBIZINFO_API_TOKEN` /
 `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `LICENSE_SIGNING_KEY` /
 `RATE_RPS`(既定 1) / `FREE_ROWS_PER_MONTH`(既定 50) / `PRO_ROWS_PER_MONTH`(既定 10000) /
-`ALERT_WEBHOOK_URL` / `PORT`(既定 8080)。
+`ALERT_WEBHOOK_URL` / `FIRESTORE_PROJECT_ID`（無料枠カウンタの Firestore プロジェクト。空なら InMemory・
+`GOOGLE_CLOUD_PROJECT` を代替参照） / `PORT`(既定 8080)。
 
 ## Docker ビルド
 

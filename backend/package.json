@@ -9,6 +9,7 @@
     "dev": "node --env-file=.env --experimental-strip-types --watch src/index.ts"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^8.6.0",
     "@hono/node-server": "^1.13.0",
     "@jp-opendata/gov-clients": "workspace:*",
     "@jp-opendata/normalize-jp": "workspace:*",

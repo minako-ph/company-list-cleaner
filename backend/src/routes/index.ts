@@ -9,6 +9,9 @@ import { logAccess } from '../log/accessLog.js';
 import { registerInvoiceRoute } from './invoice.js';
 import { registerResolveRoute } from './resolve.js';
 import { registerEnrichRoute } from './enrich.js';
+import { registerUsageRoute } from './usage.js';
+import { InMemoryQuotaStore, createQuotaService, type QuotaStore } from '../services/quota.js';
+import { createFirestoreQuotaStore } from '../services/firestore.js';
 import { resolveNames, type SearchByName } from '../services/resolve.js';
 import {
   enrichCorporations,
@@ -20,8 +23,8 @@ import {
 /**
  * ルート登録の集約点。
  *
- * `/invoice`（FR-5）・`/resolve`（FR-2/3）・`/enrich`（FR-4/6）を登録する。
- * 残りの実ルート（/license・/usage・/stripe/webhook）は後続 Step で追加する。
+ * `/invoice`（FR-5）・`/resolve`（FR-2/3）・`/enrich`（FR-4/6）・`/usage`（FR-9）を登録する。
+ * 残りの実ルート（/license・/stripe/webhook）は後続 Step で追加する。
  *
  * 公的API呼び出しは全て同一プロセス内の**単一**直列キュー（N-1）を通す
  * （invoice・houjin・gbizinfo で共有＝全ユーザー・全API横断で 1req/秒を担保）。
@@ -35,6 +38,7 @@ export function registerRoutes(app: Hono): void {
   registerInvoiceRouteFromConfig(app, config, queue);
   registerResolveRouteFromConfig(app, config, queue);
   registerEnrichRouteFromConfig(app, config, queue);
+  registerUsageRouteFromConfig(app, config);
 }
 
 type LoadedConfig = ReturnType<typeof loadConfig>;
@@ -116,5 +120,26 @@ function registerEnrichRouteFromConfig(app: Hono, config: LoadedConfig, queue: S
 
   registerEnrichRoute(app, {
     enrich: (numbers, fields) => enrichCorporations(numbers, fields, deps),
+  });
+}
+
+/**
+ * FR-9 無料枠カウント（/usage）。
+ *
+ * Firestore プロジェクトが未設定（`FIRESTORE_PROJECT_ID`/`GOOGLE_CLOUD_PROJECT` とも空）の
+ * ローカル開発では InMemory にフォールバックする。Cloud Run 本番は ADC で Firestore に自動接続する。
+ * plan は本Stepでは 'free' 固定・limit は FREE_ROWS_PER_MONTH（Pro 判定は P1 Step5）。
+ */
+function registerUsageRouteFromConfig(app: Hono, config: LoadedConfig): void {
+  const store: QuotaStore =
+    config.firestoreProjectId === ''
+      ? new InMemoryQuotaStore()
+      : createFirestoreQuotaStore(config.firestoreProjectId);
+
+  const service = createQuotaService({ store, limit: config.freeRowsPerMonth });
+
+  registerUsageRoute(app, {
+    getUsage: (userKey) => service.getUsage(userKey),
+    consume: (userKey, rows) => service.consume(userKey, rows),
   });
 }

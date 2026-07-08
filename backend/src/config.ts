@@ -28,6 +28,12 @@ export interface Config {
   readonly proRowsPerMonth: number;
   /** N-4 通知先 Webhook URL。未設定ならログ出力のみ。 */
   readonly alertWebhookUrl: string;
+  /**
+   * FR-9 無料枠カウンタを保存する Firestore のプロジェクトID。
+   * `FIRESTORE_PROJECT_ID`→`GOOGLE_CLOUD_PROJECT` の順に解決。空なら Firestore を使わず
+   * InMemory にフォールバック（ローカル開発用）。Cloud Run 本番は ADC で自動接続する。
+   */
+  readonly firestoreProjectId: string;
   /** listen ポート。既定 8080。 */
   readonly port: number;
 }
@@ -83,6 +89,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     freeRowsPerMonth: readPositiveNumber('FREE_ROWS_PER_MONTH', env.FREE_ROWS_PER_MONTH, 50),
     proRowsPerMonth: readPositiveNumber('PRO_ROWS_PER_MONTH', env.PRO_ROWS_PER_MONTH, 10000),
     alertWebhookUrl: readString(env.ALERT_WEBHOOK_URL, ''),
+    firestoreProjectId:
+      readString(env.FIRESTORE_PROJECT_ID, '') || readString(env.GOOGLE_CLOUD_PROJECT, ''),
     port: readPositiveNumber('PORT', env.PORT, 8080),
   };
 }

@@ -6,6 +6,8 @@ packages:
   - "packages/*"
 
 # esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
-# pnpm 11 では onlyBuiltDependencies ではなく allowBuilds が有効（pnpm approve-builds esbuild で生成）。
+# protobufjs は @google-cloud/firestore（FR-9 無料枠カウント）の推移依存で postinstall を持つ。
+# pnpm 11 では onlyBuiltDependencies ではなく allowBuilds が有効（pnpm approve-builds <名> で生成）。
 allowBuilds:
   esbuild: true
+  protobufjs: true
