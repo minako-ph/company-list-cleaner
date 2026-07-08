@@ -11,14 +11,14 @@ import { InMemoryQuotaStore, createQuotaService } from '../src/services/quota.js
 
 const LIMIT = 50;
 
-/** InMemory ストアで配線した /usage アプリを作る。 */
+/** InMemory ストアで配線した /usage アプリを作る（licenseKey 無し＝常に free）。 */
 function makeApp() {
   const store = new InMemoryQuotaStore();
-  const service = createQuotaService({ store, limit: LIMIT });
+  const service = createQuotaService({ store, freeLimit: LIMIT, proLimit: 10000 });
   const app = new Hono();
   registerUsageRoute(app, {
-    getUsage: (userKey) => service.getUsage(userKey),
-    consume: (userKey, rows) => service.consume(userKey, rows),
+    getUsage: (userKey, licenseKey) => service.getUsage(userKey, licenseKey),
+    consume: (userKey, rows, licenseKey) => service.consume(userKey, rows, licenseKey),
   });
   return app;
 }

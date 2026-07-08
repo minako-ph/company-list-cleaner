@@ -22,8 +22,16 @@ Hono + TypeScript（ESM）。GAS アドオンからの HTTPS を受け、公的A
   自動フォールバックする。Cloud Run 本番はこのいずれかを設定し、認証は ADC で自動接続する
   （キーはコード・環境変数に埋めない = §9）。
 
-残りの業務ルート（`/resolve` `/enrich` `/license` `/stripe/webhook`）のうち `/resolve` `/enrich` は実装済み、
-`/license` `/stripe/webhook` は後続 Step で `src/routes/` 配下に追加する。
+- `POST /license/claim` / `POST /license/recover` / `POST /license/verify`（FR-10・R3-2・
+  `src/routes/license.ts` + `src/services/license.ts` + `src/services/stripeGateway.ts`）:
+  ライセンスキー（Ed25519 署名 JWT）の発行・再表示・検証。**キーは保存しない**（検証は署名 ＋ Stripe 購読照会で
+  成立。CR-3 と両立）。`cancel_at_period_end=true` でも `current_period_end` が未来なら valid（F3-3）。
+  検証結果は短TTL（5分）メモリキャッシュ。`STRIPE_SECRET_KEY`/`LICENSE_SIGNING_KEY` 未設定時は 503 で明示。
+- `POST /stripe/webhook`（FR-10・`src/routes/stripeWebhook.ts`）: **署名検証必須**
+  （`STRIPE_WEBHOOK_SECRET` ＋生ボディ）。`checkout.session.completed` のみ処理対象だが検証のみ・保存なし・冪等。
+  署名不正は 400、secret 未設定は 503。
+
+`/resolve` `/enrich` `/license/*` `/stripe/webhook` はいずれも実装済み。
 
 ## スクリプト
 
@@ -47,6 +55,40 @@ pnpm --filter backend dev         # node --env-file=.env --experimental-strip-ty
 `RATE_RPS`(既定 1) / `FREE_ROWS_PER_MONTH`(既定 50) / `PRO_ROWS_PER_MONTH`(既定 10000) /
 `ALERT_WEBHOOK_URL` / `FIRESTORE_PROJECT_ID`（無料枠カウンタの Firestore プロジェクト。空なら InMemory・
 `GOOGLE_CLOUD_PROJECT` を代替参照） / `PORT`(既定 8080)。
+
+## ライセンス署名鍵（FR-10 / Ed25519）
+
+ライセンスキーは **Ed25519（EdDSA）署名の JWT**。バックエンドが秘密鍵で発行・検証し、
+GAS 側は公開鍵（Script Properties `LICENSE_PUBKEY`）で検証する。鍵は openssl で生成する:
+
+```
+# 秘密鍵（PKCS8 PEM）を生成 → backend の LICENSE_SIGNING_KEY に設定（Secret Manager 推奨）
+openssl genpkey -algorithm ed25519 -out license_private.pem
+
+# 対応する公開鍵（SPKI PEM）を導出 → GAS Script Properties の LICENSE_PUBKEY に設定
+openssl pkey -in license_private.pem -pubout -out license_public.pem
+```
+
+- `LICENSE_SIGNING_KEY` には `license_private.pem` の**中身（PEM 文字列全体）**をそのまま入れる
+  （改行を含む。Secret Manager では複数行のまま保存できる）。
+- `license_private.pem` はリポジトリにコミットしない（`.gitignore` 対象・§9）。
+- 鍵をローテーションすると発行済みライセンスキーは無効化される（顧客は thanks ページ／キー再表示で再取得できる）。
+
+## Stripe 設定（人間タスク — Dashboard 操作）
+
+コード側は実装済み。以下は Stripe Dashboard での設定（自動化不可の人間タスク）:
+
+1. **商品・価格**: Pro プランを **¥1,480 / 月・税込単価**で作成（Stripe Tax は v1 では使わない＝追補 R3-7）。
+   LP／特商法表記と価格・解約条件の文言を同一に保つ（三者不一致は審査差し戻しの典型原因）。
+2. **Checkout / Payment Link の成功リダイレクト先**を
+   `https://<LPドメイン>/thanks.html?session_id={CHECKOUT_SESSION_ID}` に設定する（R3-2）。
+   `{CHECKOUT_SESSION_ID}` は Stripe が実 session_id に置換するプレースホルダ（そのまま記述する）。
+3. **Webhook エンドポイント**を `https://<Cloud Run URL>/stripe/webhook` に登録し、
+   イベント `checkout.session.completed` を購読する。表示される **署名シークレット**を
+   `STRIPE_WEBHOOK_SECRET`（Secret Manager）に設定する。
+4. **カスタマーポータル**を有効化する（解約導線。特商法表記と一致）。
+5. `web/thanks.html` と `web/license-recover.html` の `BACKEND_URL`（プレースホルダ定数）を
+   Cloud Run のデプロイ URL に差し替える（未設定時は「準備中」を表示し無言で失敗しない）。
 
 ## Docker ビルド
 

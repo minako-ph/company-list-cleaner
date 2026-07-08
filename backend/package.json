@@ -13,7 +13,9 @@
     "@hono/node-server": "^1.13.0",
     "@jp-opendata/gov-clients": "workspace:*",
     "@jp-opendata/normalize-jp": "workspace:*",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "jose": "^6.2.3",
+    "stripe": "^22.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

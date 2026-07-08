@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お申し込みありがとうございます — 会社リストクリーナー for Google Sheets</title>
+  <meta name="description" content="決済完了ページ。ライセンスキーをこの画面に表示します。キーはこの画面とキー再表示フォームでいつでも確認できます。">
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <p class="site-title"><a href="index.html" style="text-decoration:none;color:inherit;">会社リストクリーナー for Google Sheets</a></p>
+      <nav class="site-nav">
+        <a href="index.html">トップ</a>
+        <a href="license-recover.html">キー再表示</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="doc">
+    <div class="wrap">
+      <h1>お申し込みありがとうございます</h1>
+      <p>Pro プラン（¥1,480 / 月・税込）のお申し込みを受け付けました。下記のライセンスキーを、スプレッドシートのサイドバーに入力すると Pro 機能が解錠されます。</p>
+
+      <!-- ライセンスキー表示領域（JSが状態に応じて書き換える） -->
+      <div id="status" class="doc" style="margin:24px 0;">
+        <p id="message">ライセンスキーを確認しています…</p>
+        <div id="key-box" style="display:none;">
+          <label for="license-key" style="font-weight:700;">ライセンスキー</label>
+          <textarea id="license-key" readonly rows="3"
+            style="width:100%;margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:0.85rem;word-break:break-all;"></textarea>
+          <button id="copy-btn" class="btn" type="button">コピーする</button>
+          <p id="copy-done" style="display:none;color:var(--accent);margin-top:8px;">コピーしました。</p>
+        </div>
+      </div>
+
+      <div class="honest" style="border-radius:8px;padding:16px 20px;">
+        <p style="margin:0;">キーはこの画面と<a href="license-recover.html">キー再表示フォーム</a>でいつでも確認できます。紛失しても、お申し込み時のメールアドレスから再表示できます。</p>
+      </div>
+
+      <p class="updated" style="margin-top:24px;">
+        解約は Stripe のカスタマーポータルからいつでも行えます。解約後も当該課金期間の満了までは Pro 機能を利用できます（<a href="tokushoho.html">特定商取引法に基づく表記</a>）。
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav>
+        <a href="index.html">トップ</a>
+        <a href="license-recover.html">キー再表示</a>
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="terms.html">利用規約</a>
+        <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      </nav>
+      <p>&copy; <span>TODO: 運営者名</span> 会社リストクリーナー</p>
+    </div>
+  </footer>
+
+  <script>
+    // バックエンド(Cloud Run)のURL。デプロイ後に実URLへ差し替える。
+    const BACKEND_URL = ''; // TODO: Cloud RunデプロイURL
+
+    (function () {
+      const messageEl = document.getElementById('message');
+      const keyBox = document.getElementById('key-box');
+      const keyField = document.getElementById('license-key');
+      const copyBtn = document.getElementById('copy-btn');
+      const copyDone = document.getElementById('copy-done');
+
+      function showMessage(text) {
+        messageEl.textContent = text;
+        keyBox.style.display = 'none';
+      }
+
+      function showKey(key) {
+        keyField.value = key;
+        messageEl.textContent = 'ライセンスキーが発行されました。下記をコピーしてサイドバーに入力してください。';
+        keyBox.style.display = 'block';
+      }
+
+      // BACKEND_URL 未設定時は無言で失敗せず「準備中」を表示する。
+      if (!BACKEND_URL) {
+        showMessage('ただいま準備中です。キーの発行環境が整うまでお待ちください（お申し込み自体は完了しています）。キー再表示フォームからも取得できます。');
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session_id');
+      if (!sessionId) {
+        showMessage('注文情報が確認できませんでした。お手数ですが、キー再表示フォームからメールアドレスで再取得してください。');
+        return;
+      }
+
+      fetch(BACKEND_URL.replace(/\/$/, '') + '/license/claim', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessionId: sessionId })
+      })
+        .then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (result) {
+          if (result.ok && result.data && typeof result.data.licenseKey === 'string') {
+            showKey(result.data.licenseKey);
+          } else {
+            showMessage('キーの発行を確認できませんでした。少し時間をおくか、キー再表示フォームからメールアドレスで再取得してください。');
+          }
+        })
+        .catch(function () {
+          showMessage('通信に失敗しました。時間をおいて再度お試しいただくか、キー再表示フォームをご利用ください。');
+        });
+
+      copyBtn.addEventListener('click', function () {
+        keyField.select();
+        const done = function () { copyDone.style.display = 'block'; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(keyField.value).then(done, function () {
+            document.execCommand('copy');
+            done();
+          });
+        } else {
+          document.execCommand('copy');
+          done();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

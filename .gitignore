@@ -8,3 +8,5 @@ apps-script/dist/
 backend/.env
 *.log
 .DS_Store
+# ライセンス署名鍵・各種秘密鍵（§9: 鍵をリポジトリに含めない）
+*.pem

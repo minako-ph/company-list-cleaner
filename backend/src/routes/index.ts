@@ -10,8 +10,18 @@ import { registerInvoiceRoute } from './invoice.js';
 import { registerResolveRoute } from './resolve.js';
 import { registerEnrichRoute } from './enrich.js';
 import { registerUsageRoute } from './usage.js';
-import { InMemoryQuotaStore, createQuotaService, type QuotaStore } from '../services/quota.js';
+import { registerLicenseRoutes } from './license.js';
+import { registerStripeWebhookRoute } from './stripeWebhook.js';
+import {
+  InMemoryQuotaStore,
+  createQuotaService,
+  type Plan,
+  type PlanResolver,
+  type QuotaStore,
+} from '../services/quota.js';
 import { createFirestoreQuotaStore } from '../services/firestore.js';
+import { createLicenseService, type LicenseService } from '../services/license.js';
+import { createStripeGateway, type StripeGateway } from '../services/stripeGateway.js';
 import { resolveNames, type SearchByName } from '../services/resolve.js';
 import {
   enrichCorporations,
@@ -23,13 +33,14 @@ import {
 /**
  * ルート登録の集約点。
  *
- * `/invoice`（FR-5）・`/resolve`（FR-2/3）・`/enrich`（FR-4/6）・`/usage`（FR-9）を登録する。
- * 残りの実ルート（/license・/stripe/webhook）は後続 Step で追加する。
+ * `/invoice`（FR-5）・`/resolve`（FR-2/3）・`/enrich`（FR-4/6）・`/usage`（FR-9）・
+ * `/license/*`・`/stripe/webhook`（FR-10）を登録する。
  *
  * 公的API呼び出しは全て同一プロセス内の**単一**直列キュー（N-1）を通す
  * （invoice・houjin・gbizinfo で共有＝全ユーザー・全API横断で 1req/秒を担保）。
  * houjin/gbizinfo クライアント内部の GovHttpClient は二重待機を避けるため間隔 0 とし、
  * レート制御はこの単一キューに一元化する（decisions.md 参照）。
+ * Stripe 呼び出しはこの公的APIキューとは無関係（レート制約の対象外）。
  */
 export function registerRoutes(app: Hono): void {
   const config = loadConfig();
@@ -38,7 +49,19 @@ export function registerRoutes(app: Hono): void {
   registerInvoiceRouteFromConfig(app, config, queue);
   registerResolveRouteFromConfig(app, config, queue);
   registerEnrichRouteFromConfig(app, config, queue);
-  registerUsageRouteFromConfig(app, config);
+
+  // ライセンス（FR-10）。Stripe/署名鍵が未設定なら license サービスは生成しない
+  // （ルートは配線しつつ 503 で明示する）。usage の Pro 判定にも同じサービスを使う。
+  // Stripe ゲートウェイは 1 回だけ生成し、license と webhook で共有する。
+  const configured = config.stripeSecretKey !== '' && config.licenseSigningKey !== '';
+  const gateway = configured ? createStripeGateway(config.stripeSecretKey) : undefined;
+  const license =
+    gateway !== undefined
+      ? createLicenseService({ signingKeyPem: config.licenseSigningKey, gateway })
+      : undefined;
+
+  registerLicenseAndWebhookFromConfig(app, config, license, gateway);
+  registerUsageRouteFromConfig(app, config, license);
 }
 
 type LoadedConfig = ReturnType<typeof loadConfig>;
@@ -124,22 +147,77 @@ function registerEnrichRouteFromConfig(app: Hono, config: LoadedConfig, queue: S
 }
 
 /**
+ * `/license/*` と `/stripe/webhook`（FR-10）を配線する。
+ * license/gateway 未生成（Stripe/署名鍵 未設定）の場合は各ルートで 503 を明示する（無言で失敗しない）。
+ */
+function registerLicenseAndWebhookFromConfig(
+  app: Hono,
+  config: LoadedConfig,
+  license: LicenseService | undefined,
+  gateway: StripeGateway | undefined,
+): void {
+  if (license === undefined || gateway === undefined) {
+    const unavailable = { error: 'not_configured', message: 'ライセンス機能は現在利用できません' };
+    for (const path of ['/license/claim', '/license/recover', '/license/verify']) {
+      app.post(path, (c) => c.json(unavailable, 503));
+    }
+    app.post('/stripe/webhook', (c) => c.json(unavailable, 503));
+    return;
+  }
+
+  registerLicenseRoutes(app, {
+    claimFromSession: (sessionId) => license.claimFromSession(sessionId),
+    recoverByEmail: (email) => license.recoverByEmail(email),
+    verify: (licenseKey) => license.verifyLicenseKey(licenseKey),
+  });
+
+  registerStripeWebhookRoute(app, {
+    webhookSecret: config.stripeWebhookSecret,
+    constructEvent: (rawBody, signature, secret) =>
+      gateway.constructWebhookEvent(rawBody, signature, secret),
+  });
+}
+
+/**
  * FR-9 無料枠カウント（/usage）。
  *
  * Firestore プロジェクトが未設定（`FIRESTORE_PROJECT_ID`/`GOOGLE_CLOUD_PROJECT` とも空）の
  * ローカル開発では InMemory にフォールバックする。Cloud Run 本番は ADC で Firestore に自動接続する。
- * plan は本Stepでは 'free' 固定・limit は FREE_ROWS_PER_MONTH（Pro 判定は P1 Step5）。
+ * plan は licenseKey（任意）を /license/verify で解決し、valid な Pro キーなら PRO_ROWS_PER_MONTH 上限。
  */
-function registerUsageRouteFromConfig(app: Hono, config: LoadedConfig): void {
+function registerUsageRouteFromConfig(
+  app: Hono,
+  config: LoadedConfig,
+  license: LicenseService | undefined,
+): void {
   const store: QuotaStore =
     config.firestoreProjectId === ''
       ? new InMemoryQuotaStore()
       : createFirestoreQuotaStore(config.firestoreProjectId);
 
-  const service = createQuotaService({ store, limit: config.freeRowsPerMonth });
+  // licenseKey→plan 解決。license 未生成なら常に free。
+  // Stripe 障害時は fail-closed で 'free' 扱い（無料枠保護を優先。Pro ユーザーが一時的に
+  // 無料上限になるのは短TTLキャッシュで自己回復する稀なケース。decisions.md 参照）。
+  const resolvePlan: PlanResolver = async (licenseKey) => {
+    if (license === undefined || licenseKey === undefined) return 'free';
+    try {
+      const verification = await license.verifyLicenseKey(licenseKey);
+      return verification.valid && verification.plan === 'pro' ? 'pro' : 'free';
+    } catch {
+      const fallback: Plan = 'free';
+      return fallback;
+    }
+  };
+
+  const service = createQuotaService({
+    store,
+    freeLimit: config.freeRowsPerMonth,
+    proLimit: config.proRowsPerMonth,
+    resolvePlan,
+  });
 
   registerUsageRoute(app, {
-    getUsage: (userKey) => service.getUsage(userKey),
-    consume: (userKey, rows) => service.consume(userKey, rows),
+    getUsage: (userKey, licenseKey) => service.getUsage(userKey, licenseKey),
+    consume: (userKey, rows, licenseKey) => service.consume(userKey, rows, licenseKey),
   });
 }

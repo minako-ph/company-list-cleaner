@@ -83,7 +83,7 @@ describe('createQuotaService.getUsage', () => {
   it('初月は rowsUsed=0・remaining=limit・plan=free の形状', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-10T00:00:00Z'));
-    const service = createQuotaService({ store: new InMemoryQuotaStore(), limit: LIMIT });
+    const service = createQuotaService({ store: new InMemoryQuotaStore(), freeLimit: LIMIT, proLimit: 10000 });
     expect(await service.getUsage('u1')).toEqual({
       month: '2026-07',
       rowsUsed: 0,
@@ -96,7 +96,7 @@ describe('createQuotaService.getUsage', () => {
   it('consume 後は rowsUsed が増え remaining が減る', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-10T00:00:00Z'));
-    const service = createQuotaService({ store: new InMemoryQuotaStore(), limit: LIMIT });
+    const service = createQuotaService({ store: new InMemoryQuotaStore(), freeLimit: LIMIT, proLimit: 10000 });
     const consumed = await service.consume('u1', 20);
     expect(consumed).toEqual({
       allowed: true,
@@ -113,7 +113,7 @@ describe('createQuotaService.getUsage', () => {
   it('超過時は allowed=false・remaining は据え置きベースで返す（消費されない）', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-10T00:00:00Z'));
-    const service = createQuotaService({ store: new InMemoryQuotaStore(), limit: LIMIT });
+    const service = createQuotaService({ store: new InMemoryQuotaStore(), freeLimit: LIMIT, proLimit: 10000 });
     await service.consume('u1', 48);
     const over = await service.consume('u1', 5); // 48+5=53 > 50
     expect(over).toEqual({
@@ -132,7 +132,7 @@ describe('createQuotaService.getUsage', () => {
 describe('JST 月境界のドキュメント分離（月次リセット＝キー分離）', () => {
   it('JST 6月末に消費した枠は JST 7月には持ち越されない（別ドキュメント・0から）', async () => {
     const store = new InMemoryQuotaStore();
-    const service = createQuotaService({ store, limit: LIMIT });
+    const service = createQuotaService({ store, freeLimit: LIMIT, proLimit: 10000 });
 
     // JST 6/30 23:59:59（= UTC 2026-06-30T14:59:59Z）に上限まで消費
     vi.useFakeTimers();

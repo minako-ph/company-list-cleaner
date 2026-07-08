@@ -22,8 +22,15 @@ export const USAGE_COUNTERS_COLLECTION = 'usage_counters';
 /** JST（Asia/Tokyo）は UTC+9（日本は夏時間なし＝固定オフセット）。 */
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-/** 契約プラン。本Stepでは 'free' 固定（ライセンスAPIは P1 Step5）。 */
+/** 契約プラン。'pro' はライセンスキーが valid のとき（P1 Step5 で接続）。 */
 export type Plan = 'free' | 'pro';
+
+/**
+ * ライセンスキー（任意）からプランを解決する関数。
+ * キー未指定・無効なら 'free'、valid な Pro キーなら 'pro' を返す実装を注入する。
+ * 既定（未注入）は常に 'free'（ライセンス連携を使わない構成・テスト用）。
+ */
+export type PlanResolver = (licenseKey: string | undefined) => Promise<Plan>;
 
 /** サイドバー常時表示用の使用量（FR-9）。 */
 export interface Usage {
@@ -162,18 +169,22 @@ export function monthKeyJst(now: Date): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-/** 使用量サービス（ルートから使う入口）。 */
+/** 使用量サービス（ルートから使う入口）。licenseKey は任意（valid な Pro キーで上限が切り替わる）。 */
 export interface QuotaService {
   /** 当月の使用量を返す（FR-9 サイドバー表示用）。 */
-  getUsage(userKey: string): Promise<Usage>;
+  getUsage(userKey: string, licenseKey?: string): Promise<Usage>;
   /** 行数を消費する（超過時は消費せず allowed=false）。 */
-  consume(userKey: string, rows: number): Promise<ConsumeResult>;
+  consume(userKey: string, rows: number, licenseKey?: string): Promise<ConsumeResult>;
 }
 
 export interface QuotaServiceDeps {
   readonly store: QuotaStore;
-  /** 当月の上限行数。plan=free 固定のため FREE_ROWS_PER_MONTH を渡す。 */
-  readonly limit: number;
+  /** Free プランの月間上限（FREE_ROWS_PER_MONTH）。 */
+  readonly freeLimit: number;
+  /** Pro プランの月間上限（PRO_ROWS_PER_MONTH）。 */
+  readonly proLimit: number;
+  /** ライセンスキー→プラン解決（P1 Step5 で /license/verify に接続）。既定は常に 'free'。 */
+  readonly resolvePlan?: PlanResolver;
   /** 現在時刻の供給（テストで固定するために注入可能。既定は実時計）。 */
   readonly now?: () => Date;
 }
@@ -181,31 +192,36 @@ export interface QuotaServiceDeps {
 /**
  * QuotaService を構築する。
  *
- * TODO(P1 Step5): ライセンスAPI実装後、Pro ユーザーは limit を PRO_ROWS_PER_MONTH に切替え、
- * plan='pro' を返すよう userKey→plan 解決を差し込む。本Stepでは 'free' 固定。
+ * plan は毎リクエスト `resolvePlan(licenseKey)` で解決し、'pro' なら proLimit・'free' なら freeLimit を適用する
+ * （P1 Step5: ライセンスAPI実装済み。ライセンス連携なしの構成では resolvePlan 未注入＝常に 'free'）。
  */
 export function createQuotaService(deps: QuotaServiceDeps): QuotaService {
   const now = deps.now ?? (() => new Date());
-  const { store, limit } = deps;
-  const plan: Plan = 'free';
+  const { store, freeLimit, proLimit } = deps;
+  const resolvePlan: PlanResolver = deps.resolvePlan ?? (() => Promise.resolve('free'));
 
-  const remainingOf = (rowsUsed: number): number => Math.max(0, limit - rowsUsed);
+  const limitOf = (plan: Plan): number => (plan === 'pro' ? proLimit : freeLimit);
+  const remainingOf = (rowsUsed: number, limit: number): number => Math.max(0, limit - rowsUsed);
 
   return {
-    async getUsage(userKey: string): Promise<Usage> {
+    async getUsage(userKey: string, licenseKey?: string): Promise<Usage> {
       const month = monthKeyJst(now());
+      const plan = await resolvePlan(licenseKey);
+      const limit = limitOf(plan);
       const rowsUsed = await store.get(docIdFor(userKey, month));
-      return { month, rowsUsed, limit, remaining: remainingOf(rowsUsed), plan };
+      return { month, rowsUsed, limit, remaining: remainingOf(rowsUsed, limit), plan };
     },
-    async consume(userKey: string, rows: number): Promise<ConsumeResult> {
+    async consume(userKey: string, rows: number, licenseKey?: string): Promise<ConsumeResult> {
       const month = monthKeyJst(now());
+      const plan = await resolvePlan(licenseKey);
+      const limit = limitOf(plan);
       const outcome = await store.consume(docIdFor(userKey, month), rows, limit);
       return {
         allowed: outcome.applied,
         month,
         rowsUsed: outcome.rowsUsed,
         limit,
-        remaining: remainingOf(outcome.rowsUsed),
+        remaining: remainingOf(outcome.rowsUsed, limit),
         plan,
       };
     },
