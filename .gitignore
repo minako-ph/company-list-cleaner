@@ -4,6 +4,7 @@ apps-script/dist/
 .clasp.json
 .env
 .env.*
+!.env.example
 backend/.env
 *.log
 .DS_Store
