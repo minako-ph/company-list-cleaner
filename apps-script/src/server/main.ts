@@ -7,9 +7,9 @@
  */
 
 /**
- * §12-5 実機検証用エントリポイント。GAS エディタから手動実行し（サイドバー UI からは
- * 呼ばない）、出力 JSON を docs/decisions.md へ反映して安定ユーザーキー方式を確定する。
- * 検証完了後、P1 で quota 実装（無料枠カウント）に統合する。
+ * 追補v1.1 R3-1: UserProperties方式の動作確認用エントリポイント。GAS エディタから
+ * 手動実行し（サイドバー UI からは呼ばない）、出力 JSON を docs/decisions.md へ反映して
+ * UUID の生成・保存・再実行での同一性を確認する。P1 で quota 実装（無料枠カウント）に統合する。
  */
 export { debugUserKeyProbe } from './userKey';
 

@@ -1,72 +1,47 @@
 /**
- * 無料枠カウント用の「安定ユーザーキー」導出（§6・§12-5）。
+ * 無料枠カウント用の「安定ユーザーキー」導出（追補v1.1 R3-1で確定）。
  *
- * OAuth スコープは3点固定（CR-7）のため `openid` / `ScriptApp.getIdentityToken()` は
- * 使用不可。その制約下で、以下の優先順に安定キーを導出する:
- *   1. `Session.getActiveUser().getEmail()` が非空
- *      → `"em:" + SHA-256hex(小文字化・trimしたemail + SALT)`
- *        （SALT は Script Properties `USER_KEY_SALT`。未設定なら明示エラー）
- *   2. email が空 → UserProperties の `STABLE_USER_KEY_UUID`（初回アクセス時に生成・保存）
- *      を使い `"up:" + uuid`（ハッシュ不要・PII でないため生値）
- *   3. UserProperties も例外を投げる → `"tmp:" + Session.getTemporaryActiveUserKey()`
- *      （約30日でローテーションする既知の劣化モード）
+ * 方式（UserProperties UUID 単独方式）:
+ *   初回起動時に `Utilities.getUuid()` で UUID を生成し
+ *   `PropertiesService.getUserProperties()` の `STABLE_USER_KEY_UUID` に保存、
+ *   以後これを安定ユーザーキーとする（ユーザー毎・スクリプト毎に分離され追加スコープ不要）。
+ *   プレフィックス（em:/up:/tmp:）は単独方式のため不要・廃止した。
  *
- * プレフィックス（em:/up:/tmp:）はバックエンド側で品質を観測するための識別子。
+ * 方式確定の理由:
+ *   - `Session.getActiveUser().getEmail()` は OAuth スコープ3点固定（CR-7）の構成では
+ *     空文字になり得て信頼できない（メール取得には追加スコープが必要でスコープ固定と衝突）。
+ *     そのため email 取得・SHA-256・SALT は使用しない（旧3段フォールバックは全廃）。
+ *   - ライセンス紐付けは「キー⇄Stripe購読」が真実源であり、この UUID は無料枠カウント専用。
  *
- * 純関数部（bytesToHex / normalizeEmail / selectKeySource）は GAS グローバルに
- * 依存せず vitest でテスト可能。GAS 依存部（getStableUserKey / debugUserKeyProbe）は
- * Session / PropertiesService / Utilities を参照するが、関数本体の実行時のみ評価される
- * ため、モジュール import 自体は GAS 環境外でも安全。
+ * 悪用余地（R3-1-3）:
+ *   ユーザーが UserProperties を消去すれば無料枠（月50行）がリセットされる余地があるが、
+ *   上限が小さく実害僅少・対策の複雑化コストの方が大きいため**対策コードは書かない**（許容）。
+ *
+ * 純関数部（isValidUuid）は GAS グローバルに依存せず vitest でテスト可能。
+ * GAS 依存部（getStableUserKey / debugUserKeyProbe）は PropertiesService / Utilities を
+ * 参照するが、関数本体の実行時のみ評価されるため import 自体は GAS 環境外でも安全。
  */
 
-/** Script Properties のキー名。SALT（em: 経路のハッシュに使う秘匿値）。 */
-const USER_KEY_SALT_PROP = 'USER_KEY_SALT';
-
-/** UserProperties のキー名。up: 経路で使う安定 UUID の保存先。 */
+/** UserProperties のキー名。安定 UUID の保存先。 */
 const STABLE_USER_KEY_UUID = 'STABLE_USER_KEY_UUID';
 
 // ---------------------------------------------------------------------------
 // 純関数部（GAS 非依存・vitest でテスト可能）
 // ---------------------------------------------------------------------------
 
-/**
- * バイト配列を小文字16進文字列に変換する。
- *
- * GAS の `Utilities.computeDigest` は signed byte（-128〜127）の配列を返すため、
- * 負値を 0-255 に正規化してから2桁 hex 化する（`& 0xff` で下位8ビットを取る）。
- *
- * @param bytes signed byte を想定した数値配列（0-255 の値もそのまま扱える）
- * @returns 各バイトを2桁 hex（0 埋め）で連結した文字列。空配列なら空文字。
- */
-export function bytesToHex(bytes: number[]): string {
-  let hex = '';
-  for (const b of bytes) {
-    hex += (b & 0xff).toString(16).padStart(2, '0');
-  }
-  return hex;
-}
+/** `Utilities.getUuid()` 形式（8-4-4-4-12 の hex・ハイフン区切り）の検証用。 */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * email を正規化する（trim + 小文字化）。ハッシュ入力の安定化に使う。
+ * `Utilities.getUuid()` 形式の UUID かどうかを検証する。
  *
- * @param email 生の email 文字列
- * @returns trim して小文字化した文字列
- */
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-/**
- * email の有無からキー導出経路を選ぶ。
+ * 8-4-4-4-12 の hex（大文字小文字問わず）をハイフン区切りで並べた形式のみ true。
  *
- * @param email `Session.getActiveUser().getEmail()` の戻り（null/undefined/空もあり得る）
- * @returns trim 後に非空なら 'email'、それ以外は 'userProperties'
+ * @param value 検証対象の文字列
+ * @returns UUID 形式なら true
  */
-export function selectKeySource(
-  email: string | null | undefined,
-): 'email' | 'userProperties' {
-  if (email == null) return 'userProperties';
-  return email.trim() !== '' ? 'email' : 'userProperties';
+export function isValidUuid(value: string): boolean {
+  return UUID_RE.test(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -79,48 +54,14 @@ function errorMessage(e: unknown): string {
 }
 
 /**
- * アクティブユーザーの email を安全に読む。失敗・null は空文字にフォールバックし、
- * 呼び出し側で up: 経路へ倒せるようにする。
+ * 無料枠カウント用の安定ユーザーキーを取得する（追補v1.1 R3-1）。
+ *
+ * UserProperties の `STABLE_USER_KEY_UUID` を読み、あればそれを返す。
+ * 無ければ `Utilities.getUuid()` で生成・保存してから返す（初回起動時のみ生成）。
+ *
+ * @returns UUID 形式の安定ユーザーキー
  */
-function readActiveUserEmail(): string {
-  try {
-    const email = Session.getActiveUser().getEmail();
-    return email == null ? '' : email;
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Script Properties から SALT を取得する。未設定なら明示エラーを投げる。
- * SALT の生値はエラーメッセージにも戻り値にも含めない。
- */
-function getUserKeySalt(): string {
-  const salt = PropertiesService.getScriptProperties().getProperty(
-    USER_KEY_SALT_PROP,
-  );
-  if (salt == null || salt === '') {
-    throw new Error('USER_KEY_SALTをScript Propertiesに設定してください');
-  }
-  return salt;
-}
-
-/** em: 経路。正規化 email + SALT の SHA-256 を hex 化して返す（生 email は返さない）。 */
-function hashEmail(email: string): string {
-  const salt = getUserKeySalt();
-  const bytes = Utilities.computeDigest(
-    Utilities.DigestAlgorithm.SHA_256,
-    normalizeEmail(email) + salt,
-    Utilities.Charset.UTF_8,
-  );
-  return bytesToHex(bytes);
-}
-
-/**
- * up: 経路。UserProperties の安定 UUID を返す（無ければ生成・保存）。
- * PropertiesService が例外を投げた場合は呼び出し側へ伝播させ、tmp: 経路へ倒す。
- */
-function getOrCreateStableUuid(): string {
+export function getStableUserKey(): string {
   const props = PropertiesService.getUserProperties();
   const existing = props.getProperty(STABLE_USER_KEY_UUID);
   if (existing != null && existing !== '') {
@@ -132,74 +73,15 @@ function getOrCreateStableUuid(): string {
 }
 
 /**
- * 無料枠カウント用の安定ユーザーキーを導出する（§6 の優先順）。
+ * UserProperties 方式の動作確認用プローブ（追補v1.1 R3-1: §12-5の読み替え）。
  *
- * @returns `"em:" | "up:" | "tmp:"` のいずれかのプレフィックスを持つキー文字列
- * @throws USER_KEY_SALT 未設定時（em: 経路に限る）
- */
-export function getStableUserKey(): string {
-  const email = readActiveUserEmail();
-  if (selectKeySource(email) === 'email') {
-    // SALT 未設定なら hashEmail が明示エラーを投げ、ここで伝播させる（握り潰さない）。
-    return 'em:' + hashEmail(email);
-  }
-  // email 空 → up: 経路。UserProperties が落ちる場合のみ tmp: へ最終フォールバック。
-  try {
-    return 'up:' + getOrCreateStableUuid();
-  } catch {
-    return 'tmp:' + Session.getTemporaryActiveUserKey();
-  }
-}
-
-/** キー文字列から `em:` / `up:` / `tmp:` のプレフィックス部を取り出す。 */
-function keyPrefix(key: string): string {
-  const idx = key.indexOf(':');
-  return idx === -1 ? '(no prefix)' : key.slice(0, idx + 1);
-}
-
-/** 各シグナルを try/catch で包み、boolean か "error: <message>" を返す。 */
-function probeBoolean(fn: () => boolean): boolean | string {
-  try {
-    return fn();
-  } catch (e) {
-    return 'error: ' + errorMessage(e);
-  }
-}
-
-/**
- * §12-5 実機検証用のプローブ。GAS エディタから手動実行し、出力 JSON を
- * docs/decisions.md へ反映して安定キー方式（①/②のどちらが主経路か）を確定する。
- *
- * PII 保護（絶対制約）: email の生値・SALT の生値は一切含めない。email は有無の
- * boolean のみ。導出された安定ユーザーキー自体はハッシュ/UUID/不透明キーで PII では
- * ないため、方式検証のためプレフィックスと全体を含める。各シグナルは try/catch で
- * 包み、失敗は "error: <message>" として記録する（プローブ全体は落とさない）。
+ * GAS エディタから手動実行し、出力 JSON を docs/decisions.md へ反映する。
+ * 確認項目: UserProperties の読み書き可否／既存キーの有無（今回新規生成したか）／
+ * 得られたキー／isValidUuid 結果。各シグナルは try/catch で包み、プローブ全体は落とさない。
  *
  * @returns 検証シグナルをまとめた JSON 文字列
  */
 export function debugUserKeyProbe(): string {
-  const activeUserEmailPresent = probeBoolean(() => {
-    const e = Session.getActiveUser().getEmail();
-    return e != null && e.trim() !== '';
-  });
-
-  const effectiveUserEmailPresent = probeBoolean(() => {
-    const e = Session.getEffectiveUser().getEmail();
-    return e != null && e.trim() !== '';
-  });
-
-  const temporaryActiveUserKeyAvailable = probeBoolean(() => {
-    const k = Session.getTemporaryActiveUserKey();
-    return k != null && k !== '';
-  });
-
-  const userKeySaltConfigured = probeBoolean(() => {
-    const s = PropertiesService.getScriptProperties().getProperty(
-      USER_KEY_SALT_PROP,
-    );
-    return s != null && s !== '';
-  });
-
   let userPropertiesReadWrite: string;
   try {
     const props = PropertiesService.getUserProperties();
@@ -212,33 +94,37 @@ export function debugUserKeyProbe(): string {
     userPropertiesReadWrite = 'error: ' + errorMessage(e);
   }
 
-  let resultKeyPrefix: string;
+  let keyExistedBeforeProbe: boolean | string;
+  try {
+    const existing = PropertiesService.getUserProperties().getProperty(
+      STABLE_USER_KEY_UUID,
+    );
+    keyExistedBeforeProbe = existing != null && existing !== '';
+  } catch (e) {
+    keyExistedBeforeProbe = 'error: ' + errorMessage(e);
+  }
+
   let stableUserKey: string;
+  let stableUserKeyIsValidUuid: boolean | string;
   try {
     const key = getStableUserKey();
     stableUserKey = key;
-    resultKeyPrefix = keyPrefix(key);
+    stableUserKeyIsValidUuid = isValidUuid(key);
   } catch (e) {
     stableUserKey = 'error: ' + errorMessage(e);
-    resultKeyPrefix = 'error: ' + errorMessage(e);
+    stableUserKeyIsValidUuid = 'error: ' + errorMessage(e);
   }
 
   const result: {
-    activeUserEmailPresent: boolean | string;
-    effectiveUserEmailPresent: boolean | string;
-    temporaryActiveUserKeyAvailable: boolean | string;
-    userKeySaltConfigured: boolean | string;
     userPropertiesReadWrite: string;
-    resultKeyPrefix: string;
+    keyExistedBeforeProbe: boolean | string;
     stableUserKey: string;
+    stableUserKeyIsValidUuid: boolean | string;
   } = {
-    activeUserEmailPresent,
-    effectiveUserEmailPresent,
-    temporaryActiveUserKeyAvailable,
-    userKeySaltConfigured,
     userPropertiesReadWrite,
-    resultKeyPrefix,
+    keyExistedBeforeProbe,
     stableUserKey,
+    stableUserKeyIsValidUuid,
   };
 
   return JSON.stringify(result, null, 2);
