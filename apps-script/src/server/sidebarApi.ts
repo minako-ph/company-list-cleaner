@@ -13,7 +13,8 @@ import { guessColumnMapping, type ColumnMapping } from './columns';
 import { getHeaderRowValues } from './sheet';
 import { getUsage } from './usage';
 import { getLicenseStatus, type LicenseStatus } from './license';
-import type { Usage } from './backendDto';
+import * as backendClient from './backendClient';
+import type { BackendHealth, Usage } from './backendDto';
 
 /** Script Property のキー名（インボイス機能フラグ）。 */
 const INVOICE_ENABLED_PROP = 'INVOICE_ENABLED';
@@ -30,6 +31,12 @@ export interface SidebarInit {
   readonly usage: Usage | null;
   readonly usageError: string | null;
   readonly license: LicenseStatus;
+  /**
+   * 公的APIの健全性（N-4）。degraded のAPIがあればサイドバーが赤帯で告知する。
+   * /health 自体が取得できない（バックエンド未接続等）場合は null とし、
+   * バックエンド障害の告知は usageError 側の既存導線に委ねる。
+   */
+  readonly apiHealth: BackendHealth | null;
 }
 
 function errorMessage(e: unknown): string {
@@ -69,6 +76,16 @@ export function getSidebarInit(): SidebarInit {
     license = { configured: false, valid: false, error: errorMessage(e) };
   }
 
+  // 公的APIの degraded 状態（N-4）。取得失敗（バックエンド未接続・未設定）は null にし、
+  // バックエンド障害告知は usageError 側の既存導線へ委ねる（無言で失敗しない）。
+  let apiHealth: BackendHealth | null = null;
+  try {
+    const result = backendClient.getHealth();
+    apiHealth = result.ok ? result.data : null;
+  } catch {
+    apiHealth = null;
+  }
+
   return {
     sheetName,
     headerRow,
@@ -80,5 +97,6 @@ export function getSidebarInit(): SidebarInit {
     usage,
     usageError,
     license,
+    apiHealth,
   };
 }

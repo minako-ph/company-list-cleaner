@@ -29,6 +29,12 @@ import {
   type GbizDep,
   type HoujinBasicDep,
 } from '../services/enrich.js';
+import {
+  createApiHealthTracker,
+  type ApiHealthTracker,
+  type ApiSource,
+} from '../services/apiHealth.js';
+import type { InvoiceFetch } from '../clients/invoice.js';
 
 /**
  * ルート登録の集約点。
@@ -46,9 +52,18 @@ export function registerRoutes(app: Hono): void {
   const config = loadConfig();
   const queue = createSerialQueue(config.rateRps);
 
-  registerInvoiceRouteFromConfig(app, config, queue);
-  registerResolveRouteFromConfig(app, config, queue);
-  registerEnrichRouteFromConfig(app, config, queue);
+  // N-4 監視: 公的API連続失敗の検知器（メモリ内。max-instances=1 前提＝R3-5）。
+  const health = createApiHealthTracker({
+    threshold: config.alertConsecutiveFailures,
+    webhookUrl: config.alertWebhookUrl,
+  });
+
+  // /health はサイドバー障害表示用に各ソースの degraded 状態を返す（N-4）。
+  app.get('/health', (c) => c.json({ ok: true, apis: health.getStatus() }));
+
+  registerInvoiceRouteFromConfig(app, config, queue, health);
+  registerResolveRouteFromConfig(app, config, queue, health);
+  registerEnrichRouteFromConfig(app, config, queue, health);
 
   // ライセンス（FR-10）。Stripe/署名鍵が未設定なら license サービスは生成しない
   // （ルートは配線しつつ 503 で明示する）。usage の Pro 判定にも同じサービスを使う。
@@ -66,12 +81,56 @@ export function registerRoutes(app: Hono): void {
 
 type LoadedConfig = ReturnType<typeof loadConfig>;
 
-function registerInvoiceRouteFromConfig(app: Hono, config: LoadedConfig, queue: SerialQueue): void {
+/**
+ * 公的API呼び出しを health tracker へ記録するラッパ。
+ * 成功で recordSuccess・失敗（reject）で recordFailure を呼び、エラーは呼び出し元へ再送出する
+ * （記録は副作用のみで、既存の部分失敗ハンドリング＝FR-8 の挙動を変えない）。
+ */
+function trackApi<T>(
+  health: ApiHealthTracker,
+  source: ApiSource,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return fn().then(
+    (value) => {
+      health.recordSuccess(source);
+      return value;
+    },
+    (error: unknown) => {
+      health.recordFailure(source);
+      throw error;
+    },
+  );
+}
+
+function registerInvoiceRouteFromConfig(
+  app: Hono,
+  config: LoadedConfig,
+  queue: SerialQueue,
+  health: ApiHealthTracker,
+): void {
+  // インボイスクライアントの公開面（lookupByRegistrationNumbers）を変えず、
+  // 注入する fetchFn を HTTP 境界でラップして成功/失敗を記録する（CRテストに触れない）。
+  const fetchFn: InvoiceFetch = async (url) => {
+    try {
+      const response = await fetch(url);
+      if (response.status >= 400) {
+        health.recordFailure('invoice');
+      } else {
+        health.recordSuccess('invoice');
+      }
+      return response;
+    } catch (error) {
+      health.recordFailure('invoice');
+      throw error;
+    }
+  };
+
   const invoiceClient = createInvoiceClient({
     apiBase: config.invoiceApiBase,
     appId: config.houjinAppId,
     queue,
-    fetchFn: (url) => fetch(url),
+    fetchFn,
     logAccess,
   });
 
@@ -81,7 +140,12 @@ function registerInvoiceRouteFromConfig(app: Hono, config: LoadedConfig, queue: 
   });
 }
 
-function registerResolveRouteFromConfig(app: Hono, config: LoadedConfig, queue: SerialQueue): void {
+function registerResolveRouteFromConfig(
+  app: Hono,
+  config: LoadedConfig,
+  queue: SerialQueue,
+  health: ApiHealthTracker,
+): void {
   // HoujinClient のコンストラクタは 13桁 id を要求するため、未設定時は生成しない。
   const houjinConfigured = /^\d{13}$/.test(config.houjinAppId);
   const houjinClient = houjinConfigured
@@ -89,12 +153,15 @@ function registerResolveRouteFromConfig(app: Hono, config: LoadedConfig, queue: 
     : undefined;
 
   // 名称検索は完全一致（target=2）・XML（type=12）。実送信は単一キュー経由（N-1）。
+  // API 呼び出しの成否を health tracker へ記録（N-4）。
   const search: SearchByName = houjinClient
     ? (name) =>
-        queue.enqueue(async () => {
-          const result = await houjinClient.searchByName(name, { type: '12', target: 2 });
-          return result.corporations;
-        })
+        queue.enqueue(() =>
+          trackApi(health, 'houjin', async () => {
+            const result = await houjinClient.searchByName(name, { type: '12', target: 2 });
+            return result.corporations;
+          }),
+        )
     : () => Promise.reject(new Error('houjin not configured'));
 
   registerResolveRoute(app, {
@@ -103,7 +170,12 @@ function registerResolveRouteFromConfig(app: Hono, config: LoadedConfig, queue: 
   });
 }
 
-function registerEnrichRouteFromConfig(app: Hono, config: LoadedConfig, queue: SerialQueue): void {
+function registerEnrichRouteFromConfig(
+  app: Hono,
+  config: LoadedConfig,
+  queue: SerialQueue,
+  health: ApiHealthTracker,
+): void {
   const houjinClient = /^\d{13}$/.test(config.houjinAppId)
     ? new HoujinClient({ id: config.houjinAppId, http: new GovHttpClient({ intervalMs: 0 }) })
     : undefined;
@@ -119,20 +191,33 @@ function registerEnrichRouteFromConfig(app: Hono, config: LoadedConfig, queue: S
   const houjinDep: HoujinBasicDep | undefined = houjinClient
     ? {
         findByNumbers: (numbers) =>
-          queue.enqueue(async () => {
-            const result = await houjinClient.findByNumbers(numbers, { type: '12' });
-            return result.corporations;
-          }),
+          queue.enqueue(() =>
+            trackApi(health, 'houjin', async () => {
+              const result = await houjinClient.findByNumbers(numbers, { type: '12' });
+              return result.corporations;
+            }),
+          ),
       }
     : undefined;
 
   const gbizDep: GbizDep | undefined = gbizClient
     ? {
-        getBasic: (n) => queue.enqueue(async () => (await gbizClient.getBasicInfo(n)).hojinInfos[0]),
+        getBasic: (n) =>
+          queue.enqueue(() =>
+            trackApi(health, 'gbizinfo', async () => (await gbizClient.getBasicInfo(n)).hojinInfos[0]),
+          ),
         getSubsidy: (n) =>
-          queue.enqueue(async () => (await gbizClient.getSubsidies(n)).hojinInfos[0]),
+          queue.enqueue(() =>
+            trackApi(health, 'gbizinfo', async () => (await gbizClient.getSubsidies(n)).hojinInfos[0]),
+          ),
         getProcurement: (n) =>
-          queue.enqueue(async () => (await gbizClient.getProcurements(n)).hojinInfos[0]),
+          queue.enqueue(() =>
+            trackApi(
+              health,
+              'gbizinfo',
+              async () => (await gbizClient.getProcurements(n)).hojinInfos[0],
+            ),
+          ),
       }
     : undefined;
 

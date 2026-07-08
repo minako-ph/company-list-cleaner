@@ -6,6 +6,7 @@ import {
   parseUsage,
   parseConsumeResult,
   parseLicenseVerification,
+  parseHealth,
 } from '../src/server/backendDto';
 
 describe('parseResolveResults（防御的パース）', () => {
@@ -106,5 +107,28 @@ describe('parseUsage / parseConsumeResult / parseLicenseVerification', () => {
     expect(parseLicenseVerification({ valid: true, plan: 'pro', periodEnd: 123 })).toEqual({ valid: true, plan: 'pro', periodEnd: 123 });
     expect(parseLicenseVerification({})).toEqual({ valid: false });
     expect(parseLicenseVerification({ valid: true, plan: 'weird' })).toEqual({ valid: true });
+  });
+});
+
+describe('parseHealth（N-4 障害表示）', () => {
+  it('degraded のみ degraded、それ以外は ok に落とす', () => {
+    expect(
+      parseHealth({ ok: true, apis: { houjin: 'ok', gbizinfo: 'degraded', invoice: 'ok' } }),
+    ).toEqual({ ok: true, apis: { houjin: 'ok', gbizinfo: 'degraded', invoice: 'ok' } });
+  });
+
+  it('apis 欠落・不正値は全て ok に落とし、ok は既定 false', () => {
+    expect(parseHealth({})).toEqual({
+      ok: false,
+      apis: { houjin: 'ok', gbizinfo: 'ok', invoice: 'ok' },
+    });
+    expect(parseHealth({ ok: true, apis: { houjin: 'weird' } })).toEqual({
+      ok: true,
+      apis: { houjin: 'ok', gbizinfo: 'ok', invoice: 'ok' },
+    });
+    expect(parseHealth(null)).toEqual({
+      ok: false,
+      apis: { houjin: 'ok', gbizinfo: 'ok', invoice: 'ok' },
+    });
   });
 });

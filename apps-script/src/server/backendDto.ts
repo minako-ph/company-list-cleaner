@@ -102,6 +102,19 @@ export interface LicenseVerification {
   readonly periodEnd?: number;
 }
 
+/** 公的APIの健全性状態（N-4。degraded=現在連続失敗が閾値以上）。 */
+export type ApiHealthState = 'ok' | 'degraded';
+
+/** GET /health の応答（N-4 サイドバー障害表示用）。 */
+export interface BackendHealth {
+  readonly ok: boolean;
+  readonly apis: {
+    readonly houjin: ApiHealthState;
+    readonly gbizinfo: ApiHealthState;
+    readonly invoice: ApiHealthState;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 汎用ガード
 // ---------------------------------------------------------------------------
@@ -318,6 +331,28 @@ export function parseConsumeResult(body: unknown): ConsumeResult {
     limit: getNumber(body, 'limit') ?? 0,
     remaining: getNumber(body, 'remaining') ?? 0,
     plan: parsePlan(getString(body, 'plan')),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// health（N-4）
+// ---------------------------------------------------------------------------
+
+/** 'degraded' のみ degraded とみなし、それ以外（欠落・不正含む）は 'ok' に落とす。 */
+function parseApiHealthState(o: unknown, key: string): ApiHealthState {
+  return getString(o, key) === 'degraded' ? 'degraded' : 'ok';
+}
+
+/** `BackendHealth`（GET /health）をパースする。 */
+export function parseHealth(body: unknown): BackendHealth {
+  const apis = isObject(body) ? Reflect.get(body, 'apis') : undefined;
+  return {
+    ok: getBoolean(body, 'ok'),
+    apis: {
+      houjin: parseApiHealthState(apis, 'houjin'),
+      gbizinfo: parseApiHealthState(apis, 'gbizinfo'),
+      invoice: parseApiHealthState(apis, 'invoice'),
+    },
   };
 }
 

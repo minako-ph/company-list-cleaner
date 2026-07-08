@@ -90,6 +90,35 @@ openssl pkey -in license_private.pem -pubout -out license_public.pem
 5. `web/thanks.html` と `web/license-recover.html` の `BACKEND_URL`（プレースホルダ定数）を
    Cloud Run のデプロイ URL に差し替える（未設定時は「準備中」を表示し無言で失敗しない）。
 
+## 監視（N-4）
+
+障害を「無言で失敗させない」ための2層構成（要件書 N-4 / 引継書 §10）。
+
+### 1. 公的API連続失敗の検知（コード側＝実装済み）
+
+- `src/services/apiHealth.ts` の `ApiHealthTracker` が、法人番号API / gBizINFO / インボイスAPI の
+  呼び出しごとに成功・失敗を記録する（`routes/index.ts` で生成し DI）。**連続失敗**が
+  `ALERT_CONSECUTIVE_FAILURES`（既定3）に達したら `ALERT_WEBHOOK_URL`（Slack互換 `{ text }`）へ通知する。
+- 抑制: 同一ソースは**一度通知したら回復（成功）まで再通知しない**＋失敗通知に**最低30分のクールダウン**。
+  回復時にも1回だけ通知する。`ALERT_WEBHOOK_URL` 未設定時は `console.error` のみ（Cloud Logging に残る）。
+- 通知本文・ログには**ソース名・連続失敗回数・時刻のみ**を載せる（社名・登録番号・応答本文・
+  シークレットは一切含めない＝CR-3/CR-5・§9）。通知先への送信失敗はアプリ動作に波及させない（握りつぶし）。
+- `GET /health` は `{ ok: true, apis: { houjin, gbizinfo, invoice } }`（各 `'ok' | 'degraded'`）を返す。
+  サイドバーはこの `degraded` を初期化時に読み、赤帯で「現在、○○APIが応答していません」を表示する。
+
+### 2. Cloud Run エラー率アラート（人間タスク＝GCPコンソール設定）
+
+コードでは設定できない。**Cloud Monitoring で以下を人間が設定する**（GCPコンソール操作）:
+
+- **メトリック**: Cloud Run の `request_count`（`monitoring.googleapis.com/...run.googleapis.com/request_count`）を
+  `response_code_class` でフィルタし、`5xx` の比率（5xx 件数 ÷ 全件数）を算出する条件を作る。
+- **アラートポリシー**: 上記 5xx 比率が一定閾値（例: 直近5分で 20% 超）を一定時間継続したら発火する条件にする。
+  対象は本サービスの Cloud Run revision（`service_name = company-list-cleaner-backend`）。
+- **通知チャネル**: メール／Slack（Incoming Webhook）等の通知チャネルを作成し、ポリシーに紐付ける
+  （`ALERT_WEBHOOK_URL` の Webhook とは別系統。片方が落ちても他方で気づける冗長化）。
+- **補助**: `console.error` で出す連続失敗ログ（上記1）を Cloud Logging のログベース指標にしても良い。
+- これらは Marketplace 公開前の運用準備タスク（Notion「人間のやる事リスト」で管理）。
+
 ## Docker ビルド
 
 **workspace ルートをビルドコンテキスト**にする（`packages/*` の workspace 依存を後続 Step で使うため。

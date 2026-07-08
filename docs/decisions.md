@@ -16,6 +16,8 @@
 
 - 2026-07-08 [追補v1.1] R3-1により安定ユーザーキーを**UserProperties UUID単独方式**に確定し、Step5のem:/up:/tmp: 3段フォールバック実装を撤去（下記2026-07-08 [§12-5]エントリは無効・履歴として残置）。プロパティ消去による無料枠リセットは許容（対策コードなし）。§12-5の実機検証は`debugUserKeyProbe()`によるUserProperties動作確認に読み替え（TODO継続）。あわせてR3-6（standalone＋版指定デプロイ→clasp.md修正）・R3-3（P1着手時に柱2側実装→再取込み→SYNC.md修正）・R3-7（特商法の提供時期文言を画面表示ベースに）を反映。R3-2のthanksページ/`/license/claim`/再表示フォームとR3-5のCloud Run構成値はbackend実装時（P1）に対応。
 
+- 2026-07-08 [N-4] 監視: 公的API連続失敗検知を`backend/src/services/apiHealth.ts`のメモリ内`ApiHealthTracker`で実装（Cloud Run max-instances=1前提＝R3-5）。連続失敗閾値既定3（`ALERT_CONSECUTIVE_FAILURES`）到達で`ALERT_WEBHOOK_URL`へSlack互換`{text}`通知。抑制=同一ソース一度通知したら回復まで再通知しない＋失敗通知に最低30分クールダウン（フラッピング連投防止）、回復時1回通知。通知本文はソース名・回数・時刻のみ（社名・登録番号・応答本文を含めない＝CR-3/5・§9）。送信失敗は握りつぶし＋console.error。`GET /health`を`{ok,apis:{houjin,gbizinfo,invoice: 'ok'|'degraded'}}`へ拡張しサイドバー赤帯表示に接続。Cloud Runエラー率アラート（5xx比率）はGCPコンソール人間タスク（backend/README.md「監視」節）。invoiceクライアントは公開面（lookupByRegistrationNumbersのみ）を変えず注入fetchFnをHTTP境界でラップして記録。
+
 - 2026-07-08 [§12-6] 柱2 `packages/gov-clients` をgit subtreeで `packages/jp-corp-core/` に初回取込み（取込元HEAD 7210ce0・split 7adc09f、記録はpackages/jp-corp-core/SYNC.md）。ただし**houjin/gbizinfoクライアントは柱2側Phase2/3で未実装**のため現内容はhttp.ts＋edinet＋houjin fixturesのみ。柱2のworkspace依存が解決不能なためpnpm workspaceには未組込み（backend利用開始時に依存subtree追加かnpm公開待ちかを決定）。
 
 - 2026-07-08 [§12-5] 安定ユーザーキー方式を暫定確定: ①`getActiveUser().getEmail()`非空→`em:`+SHA-256(小文字化email+Script Properties`USER_KEY_SALT`) ②空→UserPropertiesに初回生成UUID（`up:`） ③例外時のみ`tmp:`+`getTemporaryActiveUserKey()`（約30日ローテの劣化モード・最悪でも無料枠の早期回復に留まる）。openid/`getIdentityToken()`はCR-7スコープ3点固定のため不使用。実機検証はclasp疎通後に`debugUserKeyProbe()`で実施しここに結果を追記（TODO）。

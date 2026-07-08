@@ -12,10 +12,12 @@
 import {
   parseConsumeResult,
   parseEnrichResults,
+  parseHealth,
   parseInvoiceResults,
   parseLicenseVerification,
   parseResolveResults,
   parseUsage,
+  type BackendHealth,
   type ConsumeResult,
   type EnrichRow,
   type InvoiceStatus,
@@ -123,6 +125,11 @@ function mapOk<T>(result: BackendResult<unknown>, parse: (body: unknown) => T): 
 // ---------------------------------------------------------------------------
 // 各エンドポイント
 // ---------------------------------------------------------------------------
+
+/** GET /health（N-4 公的APIの degraded 状態）。障害表示の初期化に使う。 */
+export function getHealth(): BackendResult<BackendHealth> {
+  return mapOk(requestRaw('get', '/health', undefined), parseHealth);
+}
 
 /** GET /usage（FR-9 使用量表示）。 */
 export function getUsage(userKey: string, licenseKey?: string): BackendResult<Usage> {

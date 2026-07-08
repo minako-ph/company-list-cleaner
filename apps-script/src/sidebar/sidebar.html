@@ -375,6 +375,25 @@
         }
 
         // ------------------------------------------------------------------
+        // 公的API障害の表示（N-4）
+        // ------------------------------------------------------------------
+        function apiLabel(key) {
+          if (key === 'houjin') return '法人番号API';
+          if (key === 'gbizinfo') return 'gBizINFO';
+          if (key === 'invoice') return 'インボイスAPI';
+          return key;
+        }
+
+        function degradedApiLabels(health) {
+          if (!health || !health.apis) return [];
+          var out = [];
+          ['houjin', 'gbizinfo', 'invoice'].forEach(function (k) {
+            if (health.apis[k] === 'degraded') out.push(apiLabel(k));
+          });
+          return out;
+        }
+
+        // ------------------------------------------------------------------
         // 使用量（FR-9）
         // ------------------------------------------------------------------
         function renderUsage(usage) {
@@ -766,6 +785,17 @@
           }
 
           renderLicense(init.license);
+
+          // 公的APIが degraded なら赤帯で告知（N-4。無言で失敗しない）。
+          // /health 自体が取れないバックエンド障害は上の usageError 側に委ねる。
+          var degraded = degradedApiLabels(init.apiHealth);
+          if (degraded.length > 0) {
+            showBanner(
+              '現在、' +
+                degraded.join('・') +
+                'が応答していません（該当機能は一時的に失敗する可能性があります）。',
+            );
+          }
         }
 
         function boot() {
