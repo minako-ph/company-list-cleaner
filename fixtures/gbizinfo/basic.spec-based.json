@@ -1,0 +1,29 @@
+{
+  "id": "https://api.info.gbiz.go.jp/hojin/v2/hojin/5000012090001",
+  "message": "接続に成功しました。",
+  "errors": [],
+  "hojin-infos": [
+    {
+      "corporate_number": "5000012090001",
+      "name": "サンプル株式会社",
+      "kana": "サンプルカブシキガイシャ",
+      "location": "東京都千代田区霞が関一丁目1番1号",
+      "postal_code": "1000013",
+      "status": "-",
+      "close_date": "Null",
+      "close_cause": "Null",
+      "update_date": "2026-06-01T00:00:00+09:00",
+      "company_url": "Null",
+      "representative_name": "山田太郎",
+      "representative_position": "代表取締役",
+      "capital_stock": 100000000,
+      "employee_number": 250,
+      "date_of_establishment": "2001-04-01",
+      "business_summary": "ソフトウェアの開発および販売",
+      "company_size_male": 180,
+      "company_size_female": 70,
+      "business_items": ["情報通信業"],
+      "qualification_grade": "Null"
+    }
+  ]
+}

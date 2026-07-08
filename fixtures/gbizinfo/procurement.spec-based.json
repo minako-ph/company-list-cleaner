@@ -1,0 +1,28 @@
+{
+  "id": "https://api.info.gbiz.go.jp/hojin/v2/hojin/5000012090001/procurement",
+  "message": "接続に成功しました。",
+  "errors": [],
+  "hojin-infos": [
+    {
+      "corporate_number": "5000012090001",
+      "name": "サンプル株式会社",
+      "location": "東京都千代田区霞が関一丁目1番1号",
+      "procurement": [
+        {
+          "title": "システム開発業務一式",
+          "amount": 5000000,
+          "date_of_order": "2025-02-10",
+          "government_departments": "デジタル庁",
+          "joint_signatures": "Null"
+        },
+        {
+          "title": "保守運用業務",
+          "amount": "Null",
+          "date_of_order": "2024-09-01",
+          "government_departments": "デジタル庁",
+          "joint_signatures": "株式会社共同企業体"
+        }
+      ]
+    }
+  ]
+}

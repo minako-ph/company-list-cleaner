@@ -5,8 +5,8 @@
  */
 export * from './http.js';
 export * from './edinet/index.js';
+export * from './gbizinfo/index.js';
+export * from './houjin/index.js';
 
-// TODO(Phase 2): gbizinfo クライアント（v2仕様は docs/research/gbizinfo-v2.md 参照）
 // TODO(Phase 2): reinfolib クライアント（キー到着後）
-// TODO(Phase 3): houjin クライアント（検証環境はアプリID必須。fixtures/houjin/ に公式サンプル採取済み）
 // TODO(Phase 4): laws クライアント（JSON＋XMLフォールバック）
