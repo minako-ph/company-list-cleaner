@@ -8,8 +8,11 @@ Hono + TypeScript（ESM）。GAS アドオンからの HTTPS を受け、公的A
 - 直列キュー（`src/queue.ts`）: 全公的API呼び出しを **プロセス内で直列・最低 1/RATE_RPS 秒間隔**に制御（N-1）
 - CR-5 アクセスログ（`src/log/accessLog.ts`）: `{ user_key, timestamp, registration_number }` の **3点のみ** を stdout に構造化出力
 - 環境変数の読み取り（`src/config.ts`。値はログしない = §9）
+- `POST /invoice`（FR-5・`src/routes/invoice.ts` + `src/clients/invoice.ts`）: 登録番号（`T＋13桁`）のみで
+  インボイス登録状況を照会（CR-1/2）。`INVOICE_ENABLED=false` のときは 503 `{ error: 'invoice_disabled' }`
+  で明示応答（縮退公開）。応答は保存・ログせず呼び出し元へ返す（CR-3）。照会番号ごとに CR-5 の3点ログのみ。
 
-業務ルート（`/resolve` `/enrich` `/invoice` `/license` `/usage` `/stripe/webhook`）は後続 Step で `src/routes/` 配下に追加する。
+残りの業務ルート（`/resolve` `/enrich` `/license` `/usage` `/stripe/webhook`）は後続 Step で `src/routes/` 配下に追加する。
 
 ## スクリプト
 

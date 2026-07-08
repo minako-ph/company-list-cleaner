@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-08 [P1 Step2] `backend/src/clients/invoice.ts`（本リポジトリ専用・CR-1/2の型縛り）を実装。公開値exportは`createInvoiceClient`のみ・照会手段は`lookupByRegistrationNumbers(numbers, {userKey})`だけ（名称系の引数・関数・クエリ文字列を存在させない）。応答パースは**実応答未取得のためspec-based**: `announcement[].registratedNumber`（APIスペル原文ママ）で突合し、`registrationDate`非空を`found`、`disposalDate`/`expireDate`非空で`registered=false`（取消/失効）と判定。未登録番号は`announcement`に現れない前提（一致なし→found=false）。実応答到着時は`backend/test/fixtures/invoice/README.md`の差し替え手順でキー名を検証・修正する。エラーメッセージはredactUrlでクエリ（id・番号）除去（CR: アプリID非漏洩）。`/invoice`は`INVOICE_ENABLED=false`で503`{error:'invoice_disabled'}`（縮退公開）。CRテストは`backend/test/cr-compliance.test.ts`（CR-1/2ソース走査・CR-4 /diff//point/download不在・CR-3永続化/logAccess引数走査＝accessLogスナップショットとの二重防御）。
+
 - 2026-07-08 [G2完了] 柱2からjp-corp-core（gov-clients: houjin/gbizinfo/F-1含むHEAD `bf435ed`）を再取込みし、schema-buffer・normalize-jp・**testing**を個別subtree取込みして4ディレクトリをpnpm workspaceへ登録（レビューG2は3ディレクトリ指定だが、gov-clientsのdevDependency `@jp-opendata/testing` がworkspace:*のためinstall解決に必須→testingを追加。記録はpackages/jp-corp-core/SYNC.md）。typecheckはルートtsconfig.packages.json（柱2 tsconfig.base.json同一設定）、テストはルートvitest.config.tsで実行（56件緑）。F3-1の参照禁止柵は解除。G1（柱2main bf435ed にhoujin/gbizinfo＋F-1）・G2ともに充足→P1着手可。
 
 - 2026-07-08 [F3-3・実装要件] `/license`検証はStripeの`cancel_at_period_end`を尊重し、**解約済みでも当該課金期間の満了まではvalidと判定する**（特商法表記「解約後も当該課金期間の満了までPro機能を利用できます」との一致が必須。review-2026-07-08 §2。P1 Step5で実装）。

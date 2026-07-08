@@ -1,0 +1,44 @@
+{
+  "count": "3",
+  "announcement": [
+    {
+      "sequenceNumber": "1",
+      "registratedNumber": "T1111111111111",
+      "process": "01",
+      "correct": "",
+      "kind": "2",
+      "country": "1",
+      "latest": "1",
+      "registrationDate": "2023-10-01",
+      "updateDate": "2023-10-01",
+      "disposalDate": "",
+      "expireDate": ""
+    },
+    {
+      "sequenceNumber": "2",
+      "registratedNumber": "T2222222222222",
+      "process": "99",
+      "correct": "",
+      "kind": "2",
+      "country": "1",
+      "latest": "1",
+      "registrationDate": "2022-04-01",
+      "updateDate": "2024-03-31",
+      "disposalDate": "2024-03-31",
+      "expireDate": ""
+    },
+    {
+      "sequenceNumber": "3",
+      "registratedNumber": "T3333333333333",
+      "process": "99",
+      "correct": "",
+      "kind": "2",
+      "country": "1",
+      "latest": "1",
+      "registrationDate": "2021-11-01",
+      "updateDate": "2023-12-31",
+      "disposalDate": "",
+      "expireDate": "2023-12-31"
+    }
+  ]
+}

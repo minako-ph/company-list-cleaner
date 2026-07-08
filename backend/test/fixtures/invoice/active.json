@@ -1,0 +1,18 @@
+{
+  "count": "1",
+  "announcement": [
+    {
+      "sequenceNumber": "1",
+      "registratedNumber": "T1111111111111",
+      "process": "01",
+      "correct": "",
+      "kind": "2",
+      "country": "1",
+      "latest": "1",
+      "registrationDate": "2023-10-01",
+      "updateDate": "2023-10-01",
+      "disposalDate": "",
+      "expireDate": ""
+    }
+  ]
+}
