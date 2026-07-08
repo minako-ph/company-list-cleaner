@@ -12,9 +12,25 @@ export interface HttpStats {
   retries: number;
 }
 
+/**
+ * エラーメッセージ用にURLからクエリを除去する（キーはクエリで送られるため全除去が最も安全）。
+ * エラーメッセージは実行ステータス・Apifyログ・datasetの_errorとして利用者に露出するため、
+ * 両エラークラスのコンストラクタ内部で必ず適用する（呼び出し側の付け忘れを構造的に防ぐ）。
+ * EDINETの`Subscription-Key`だけでなく、将来のクライアント（法人番号Web-APIはクエリ`id=`で
+ * アプリケーションIDを送る）も自動的に保護される。
+ */
+export function redactUrlForError(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.origin}${u.pathname}${u.search ? '?[query redacted]' : ''}`;
+  } catch {
+    return '[invalid url]';
+  }
+}
+
 export class RateLimitAbortError extends Error {
   constructor(url: string, status: number) {
-    super(`レート制限/拒否が継続（${status}）: バックオフ3回で中断 url=${url}`);
+    super(`レート制限/拒否が継続（${status}）: バックオフ3回で中断 url=${redactUrlForError(url)}`);
     this.name = 'RateLimitAbortError';
   }
 }
@@ -24,7 +40,7 @@ export class HttpStatusError extends Error {
     public readonly status: number,
     url: string,
   ) {
-    super(`HTTP ${status}: ${url}`);
+    super(`HTTP ${status}: ${redactUrlForError(url)}`);
     this.name = 'HttpStatusError';
   }
 }

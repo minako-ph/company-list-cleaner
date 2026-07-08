@@ -88,4 +88,46 @@ describe('GovHttpClient', () => {
     await expect(client.get('https://example.test/err')).rejects.toThrow(HttpStatusError);
     expect(client.getStats().failures).toBe(1);
   });
+
+  // F-1回帰: APIキーはクエリで送られるため、エラーメッセージにURLクエリを含めてはならない
+  // （メッセージは実行ステータス・Apifyログ・datasetの_errorとして利用者に露出する）
+  it('F-1: バックオフ枯渇のRateLimitAbortError.messageにクエリ（キー）を含めない', async () => {
+    const { fetchFn } = fakeFetchFactory([
+      { status: 403, body: '' },
+      { status: 403, body: '' },
+      { status: 403, body: '' },
+      { status: 403, body: '' },
+    ]);
+    const client = makeClient(fetchFn, []);
+    const error = await client
+      .get('https://example.test/documents.json?date=2026-06-30&Subscription-Key=SECRET_KEY_12345')
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect(error).toBeInstanceOf(RateLimitAbortError);
+    if (error instanceof RateLimitAbortError) {
+      expect(error.message).not.toContain('Subscription-Key');
+      expect(error.message).not.toContain('SECRET_KEY_12345');
+      expect(error.message).toContain('[query redacted]');
+      expect(error.message).toContain('https://example.test/documents.json');
+    }
+  });
+
+  it('F-1: HttpStatusError.messageにクエリ（キー）を含めない', async () => {
+    const { fetchFn } = fakeFetchFactory([{ status: 500, body: 'boom' }]);
+    const client = makeClient(fetchFn, []);
+    const error = await client
+      .get('https://example.test/documents/S100X?type=5&Subscription-Key=SECRET_KEY_12345')
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect(error).toBeInstanceOf(HttpStatusError);
+    if (error instanceof HttpStatusError) {
+      expect(error.message).not.toContain('Subscription-Key');
+      expect(error.message).not.toContain('SECRET_KEY_12345');
+      expect(error.message).toContain('[query redacted]');
+    }
+  });
 });
