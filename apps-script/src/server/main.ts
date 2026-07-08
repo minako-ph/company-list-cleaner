@@ -13,6 +13,16 @@
  */
 export { debugUserKeyProbe } from './userKey';
 
+/**
+ * サイドバー本実装（P1 Step6）のエントリポイント群を re-export する。
+ * これらは google.script.run から呼ばれるため build.mjs の ENTRY_POINTS にも登録する。
+ */
+export { getSidebarInit } from './sidebarApi';
+export { getUsage } from './usage';
+export { processBatch, getReprocessRows } from './processBatch';
+export { applyCandidate } from './candidates';
+export { saveLicenseKey, getLicenseStatus, clearLicenseKey } from './license';
+
 const PRODUCT_NAME = '会社リストクリーナー';
 const MENU_TITLE = PRODUCT_NAME;
 const SIDEBAR_TITLE = PRODUCT_NAME;
@@ -52,19 +62,3 @@ export function sayHello(): string {
   return `こんにちは。「${name}」に接続しました（${PRODUCT_NAME}）。`;
 }
 
-/**
- * バッチ処理エントリポイント（P1で実装）。
- *
- * N-2 バッチ設計: 実行主体はサイドバー側 JS とし、対象行を50行単位に分割して
- * `google.script.run.processBatch(rows, options)` を逐次呼び出す。各呼び出しは
- * 数十秒で返し、GASの6分実行制限を回避する。進捗はサイドバーで表示し、
- * 中断・再開はステータス列（FR-7）を真実源とする。
- *
- * @param rows 50行単位に分割された対象行（サイドバーから渡される）
- * @param options 列マッピング・付与項目などの処理オプション
- */
-export function processBatch(rows: unknown, options: unknown): never {
-  void rows;
-  void options;
-  throw new Error('P1で実装');
-}

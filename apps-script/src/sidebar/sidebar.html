@@ -11,20 +11,64 @@
       }
       body {
         margin: 0;
-        padding: 16px;
+        padding: 14px;
         color: #202124;
         font-size: 13px;
         line-height: 1.6;
       }
-      header h1 {
-        margin: 0 0 4px;
+      h1 {
+        margin: 0 0 2px;
         font-size: 15px;
         font-weight: 600;
       }
-      header p {
-        margin: 0 0 16px;
+      .tagline {
+        margin: 0 0 12px;
         color: #5f6368;
         font-size: 12px;
+      }
+      section {
+        border-top: 1px solid #e0e0e0;
+        padding: 12px 0;
+      }
+      section:first-of-type {
+        border-top: none;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      label {
+        display: block;
+        margin: 4px 0 2px;
+        color: #3c4043;
+      }
+      select,
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row > div {
+        flex: 1;
+      }
+      .checks label {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin: 6px 0;
+        cursor: pointer;
+      }
+      .checks input {
+        margin-top: 3px;
       }
       button {
         appearance: none;
@@ -32,66 +76,719 @@
         border-radius: 4px;
         background: #1a73e8;
         color: #fff;
-        padding: 8px 16px;
+        padding: 8px 14px;
         font-size: 13px;
         cursor: pointer;
       }
+      button.secondary {
+        background: #fff;
+        color: #1a73e8;
+        border: 1px solid #dadce0;
+      }
+      button.danger {
+        background: #fff;
+        color: #c5221f;
+        border: 1px solid #f3c2be;
+      }
       button:disabled {
-        background: #a9c7f5;
+        background: #f1f3f4;
+        color: #9aa0a6;
+        border-color: #e0e0e0;
         cursor: default;
       }
-      #result {
-        margin-top: 16px;
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .banner {
+        display: none;
+        margin: 0 0 12px;
         padding: 8px 12px;
         border-radius: 4px;
-        background: #f1f3f4;
-        white-space: pre-wrap;
-        word-break: break-word;
-        min-height: 1.6em;
-      }
-      #result.error {
         background: #fce8e6;
         color: #c5221f;
+        border: 1px solid #f3c2be;
+        white-space: pre-wrap;
+      }
+      .banner.show {
+        display: block;
+      }
+      .usage-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e8eaed;
+        overflow: hidden;
+        margin: 6px 0;
+      }
+      .usage-bar > span {
+        display: block;
+        height: 100%;
+        background: #1a73e8;
+      }
+      .usage-depleted .usage-bar > span {
+        background: #f29900;
+      }
+      .muted {
+        color: #5f6368;
+        font-size: 12px;
+      }
+      .progress {
+        height: 8px;
+        border-radius: 4px;
+        background: #e8eaed;
+        overflow: hidden;
+        margin: 8px 0 4px;
+      }
+      .progress > span {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: #34a853;
+        transition: width 0.2s;
+      }
+      .candidate {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 8px 0;
+      }
+      .candidate .name {
+        font-weight: 600;
+      }
+      details {
+        margin: 4px 0;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .source {
+        background: #f8f9fa;
+        border-left: 3px solid #dadce0;
+        padding: 6px 10px;
+        margin: 8px 0;
+        font-size: 12px;
+        color: #3c4043;
+      }
+      a {
+        color: #1a73e8;
+      }
+      .links a {
+        display: inline-block;
+        margin-right: 12px;
+      }
+      .hidden {
+        display: none;
+      }
+      .notice {
+        background: #fef7e0;
+        border: 1px solid #fde293;
+        border-radius: 4px;
+        padding: 6px 10px;
+        margin: 6px 0;
+        font-size: 12px;
       }
     </style>
   </head>
   <body>
-    <header>
-      <h1>会社リストクリーナー</h1>
-      <p>取引先リストの正規化・法人番号付与ツール（疎通確認モード）</p>
-    </header>
+    <h1>会社リストクリーナー</h1>
+    <p class="tagline">
+      取引先リストの整備を、スプレッドシートから出ずに。公式データだけで。
+    </p>
 
-    <button id="hello-btn" type="button">Hello</button>
-    <div id="result" aria-live="polite"></div>
+    <div id="banner" class="banner" aria-live="assertive"></div>
+
+    <!-- 1. 使用量（FR-9） -->
+    <section id="usage-section">
+      <h2>今月の使用量</h2>
+      <div id="usage-body" class="muted">読み込み中…</div>
+      <div class="usage-bar"><span id="usage-fill"></span></div>
+      <div id="usage-detail" class="muted"></div>
+      <div id="usage-upgrade" class="notice hidden"></div>
+    </section>
+
+    <!-- 2. 列マッピング（FR-1） -->
+    <section>
+      <h2>対象範囲と列の指定</h2>
+      <label for="sheet-name">対象シート</label>
+      <input id="sheet-name" type="text" readonly />
+      <div class="row">
+        <div>
+          <label for="start-row">開始行</label>
+          <input id="start-row" type="number" min="1" />
+        </div>
+        <div>
+          <label for="end-row">終了行</label>
+          <input id="end-row" type="number" min="1" />
+        </div>
+      </div>
+      <label for="name-col">社名の列</label>
+      <select id="name-col"></select>
+      <label for="corp-col">法人番号の列（任意）</label>
+      <select id="corp-col"></select>
+      <label for="reg-col">登録番号の列（任意・T番号）</label>
+      <select id="reg-col"></select>
+      <p class="muted">
+        ヘッダー名から自動推定した初期値です。必要に応じて修正してください。
+      </p>
+    </section>
+
+    <!-- 3. 付与オプション -->
+    <section>
+      <h2>付与する項目</h2>
+      <div class="checks">
+        <label><input type="checkbox" id="opt-normalize" checked /><span>社名を正規化する</span></label>
+        <label><input type="checkbox" id="opt-resolve" checked /><span>法人番号を付与する（社名から解決）</span></label>
+        <label><input type="checkbox" id="opt-basic" /><span>住所・法人種別など基本情報（法人番号）</span></label>
+        <label><input type="checkbox" id="opt-gbiz" /><span>業種・設立・従業員数など（gBizINFO）</span></label>
+        <label><input type="checkbox" id="opt-subsidy" /><span>補助金・調達実績の有無（gBizINFO）</span></label>
+        <label id="opt-invoice-label"
+          ><input type="checkbox" id="opt-invoice" /><span
+            >インボイス登録を確認する<span id="opt-invoice-note" class="muted hidden">（準備中）</span></span
+          ></label
+        >
+      </div>
+    </section>
+
+    <!-- 4. 実行 -->
+    <section>
+      <h2>実行</h2>
+      <div class="btn-row">
+        <button id="run-btn" type="button">実行</button>
+        <button id="rerun-btn" class="secondary" type="button">
+          未処理・エラー行のみ再実行
+        </button>
+        <button id="abort-btn" class="danger hidden" type="button">中断</button>
+      </div>
+      <div class="progress"><span id="progress-fill"></span></div>
+      <div id="progress-text" class="muted"></div>
+      <div id="notices"></div>
+    </section>
+
+    <!-- 5. 候補選択（FR-3） -->
+    <section id="candidates-section" class="hidden">
+      <h2>候補の選択</h2>
+      <p class="muted">
+        社名から法人番号を一意に決められなかった行です。正しい候補を選んで適用してください。
+      </p>
+      <div id="candidates-body"></div>
+    </section>
+
+    <!-- 6. ライセンス（FR-10） -->
+    <section>
+      <h2>ライセンス（Pro）</h2>
+      <div id="license-status" class="muted">確認中…</div>
+      <label for="license-key">ライセンスキー</label>
+      <input id="license-key" type="text" placeholder="決済完了メールに記載のキー" />
+      <div class="btn-row">
+        <button id="license-save" type="button">保存して有効化</button>
+        <button id="license-clear" class="secondary" type="button">キーを削除</button>
+      </div>
+      <p class="links" style="margin-top: 10px">
+        <a id="upgrade-link" href="#TODO" target="_blank" rel="noopener">Proにアップグレード</a>
+        <a id="portal-link" href="#TODO" target="_blank" rel="noopener">解約はこちら（カスタマーポータル）</a>
+        <a id="recover-link" href="#TODO" target="_blank" rel="noopener">キーを忘れた方</a>
+      </p>
+    </section>
+
+    <!-- 7. ヘルプ（FR-12） -->
+    <section>
+      <h2>ヘルプ・出典</h2>
+      <details>
+        <summary>使い方（3ステップ）</summary>
+        <ol>
+          <li>「対象範囲と列の指定」で社名の列を選ぶ（初期値は自動推定）。</li>
+          <li>「付与する項目」で必要な情報にチェックを入れる。</li>
+          <li>「実行」を押す。結果は右側に新しい列として追記される。</li>
+        </ol>
+      </details>
+      <details>
+        <summary>個人事業主の取引先について</summary>
+        <p>
+          個人事業主の取引先は、登録番号（T番号）が既にリストにある場合のみ照会できます。社名から個人事業主の登録番号を導出することはできません。
+        </p>
+      </details>
+      <details>
+        <summary>出典の表示</summary>
+        <p class="source">
+          このサービスは、国税庁適格請求書発行事業者公表システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない
+        </p>
+        <p class="source">
+          このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない
+        </p>
+        <p class="source">出典：経済産業省 Gビズインフォ</p>
+      </details>
+      <details>
+        <summary>うまく動かないときは</summary>
+        <p>
+          外部データの取得中に障害があると、画面上部に赤い帯で状態を表示します。時間をおいて「未処理・エラー行のみ再実行」をお試しください。処理済みの行は上書きされません。
+        </p>
+      </details>
+    </section>
 
     <script>
       (function () {
-        var btn = document.getElementById('hello-btn');
-        var result = document.getElementById('result');
+        'use strict';
 
-        function show(message, isError) {
-          result.textContent = message;
-          if (isError) {
-            result.classList.add('error');
+        // ------------------------------------------------------------------
+        // google.script.run を Promise 化するヘルパ
+        // ------------------------------------------------------------------
+        function call(name, arg) {
+          return new Promise(function (resolve, reject) {
+            google.script.run
+              .withSuccessHandler(resolve)
+              .withFailureHandler(function (err) {
+                reject(new Error(err && err.message ? err.message : String(err)));
+              })
+              [name](arg);
+          });
+        }
+
+        var state = {
+          init: null,
+          running: false,
+          aborted: false,
+          ambiguous: [],
+        };
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        function showBanner(message) {
+          var b = $('banner');
+          b.textContent = message;
+          b.classList.add('show');
+        }
+        function clearBanner() {
+          $('banner').classList.remove('show');
+        }
+
+        function chunk(arr, size) {
+          var out = [];
+          for (var i = 0; i < arr.length; i += size) {
+            out.push(arr.slice(i, i + size));
+          }
+          return out;
+        }
+
+        // ------------------------------------------------------------------
+        // 使用量（FR-9）
+        // ------------------------------------------------------------------
+        function renderUsage(usage) {
+          if (!usage) return;
+          var used = usage.rowsUsed;
+          var limit = usage.limit;
+          var remaining = usage.remaining;
+          var planLabel = usage.plan === 'pro' ? 'Pro' : 'Free';
+          $('usage-body').textContent = '今月 ' + used + '/' + limit + '行（' + planLabel + '）';
+          var pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+          $('usage-fill').style.width = pct + '%';
+          $('usage-detail').textContent = '残り ' + remaining + '行';
+          var section = $('usage-section');
+          var upgrade = $('usage-upgrade');
+          // アップグレード導線は文脈内のみ（枯渇時）。脅さず選択肢を並記（marketing §8-2）。
+          if (usage.plan === 'free' && remaining <= 0) {
+            section.classList.add('usage-depleted');
+            upgrade.textContent =
+              '今月はあと0行。来月1日に' + limit + '行回復／今すぐ続けるならPro。';
+            upgrade.classList.remove('hidden');
           } else {
-            result.classList.remove('error');
+            section.classList.remove('usage-depleted');
+            upgrade.classList.add('hidden');
           }
         }
 
-        btn.addEventListener('click', function () {
-          btn.disabled = true;
-          show('サーバーに問い合わせ中…', false);
+        function refreshUsage() {
+          call('getUsage')
+            .then(renderUsage)
+            .catch(function (e) {
+              $('usage-body').textContent = '使用量を取得できませんでした。';
+              showBanner('現在バックエンドが応答していません: ' + e.message);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // 列マッピング（FR-1）
+        // ------------------------------------------------------------------
+        function columnLabel(header, index) {
+          var name = header && String(header).trim() !== '' ? String(header) : '(無題)';
+          return String(index + 1) + '列目: ' + name;
+        }
+
+        function populateSelect(select, headers, selectedCol, allowNone) {
+          select.innerHTML = '';
+          if (allowNone) {
+            var none = document.createElement('option');
+            none.value = '';
+            none.textContent = '（なし）';
+            select.appendChild(none);
+          }
+          headers.forEach(function (h, i) {
+            var opt = document.createElement('option');
+            opt.value = String(i + 1);
+            opt.textContent = columnLabel(h, i);
+            select.appendChild(opt);
+          });
+          if (selectedCol) {
+            select.value = String(selectedCol);
+          } else if (!allowNone && headers.length > 0) {
+            select.value = '1';
+          } else {
+            select.value = '';
+          }
+        }
+
+        function readMapping() {
+          var mapping = {};
+          var name = parseInt($('name-col').value, 10);
+          var corp = parseInt($('corp-col').value, 10);
+          var reg = parseInt($('reg-col').value, 10);
+          if (name >= 1) mapping.nameCol = name;
+          if (corp >= 1) mapping.corpNumCol = corp;
+          if (reg >= 1) mapping.regNumCol = reg;
+          return mapping;
+        }
+
+        function readOptions() {
+          return {
+            doNormalize: $('opt-normalize').checked,
+            doResolve: $('opt-resolve').checked,
+            doInvoice: $('opt-invoice').checked,
+            // 補助金・調達実績はUI上は1つのチェックで両方を付与する。
+            enrichFields: {
+              basic: $('opt-basic').checked,
+              gbizBasic: $('opt-gbiz').checked,
+              subsidy: $('opt-subsidy').checked,
+              procurement: $('opt-subsidy').checked,
+            },
+          };
+        }
+
+        // ------------------------------------------------------------------
+        // 実行（N-2: サイドバー側で50行チャンクを逐次呼ぶ）
+        // ------------------------------------------------------------------
+        function rowRange() {
+          var start = parseInt($('start-row').value, 10);
+          var end = parseInt($('end-row').value, 10);
+          var rows = [];
+          if (start >= 1 && end >= start) {
+            for (var r = start; r <= end; r++) rows.push(r);
+          }
+          return rows;
+        }
+
+        function validateBeforeRun(options) {
+          var mapping = readMapping();
+          var anyOption =
+            options.doNormalize ||
+            options.doResolve ||
+            options.doInvoice ||
+            options.enrichFields.basic ||
+            options.enrichFields.gbizBasic ||
+            options.enrichFields.subsidy ||
+            options.enrichFields.procurement;
+          if (!anyOption) return '付与する項目を1つ以上選んでください。';
+          if ((options.doNormalize || options.doResolve) && mapping.nameCol === undefined) {
+            return '社名の列を指定してください。';
+          }
+          if (options.doInvoice && mapping.nameCol === undefined && mapping.corpNumCol === undefined && mapping.regNumCol === undefined) {
+            return 'インボイス確認には社名・法人番号・登録番号のいずれかの列が必要です。';
+          }
+          return null;
+        }
+
+        function setRunning(running) {
+          state.running = running;
+          $('run-btn').disabled = running;
+          $('rerun-btn').disabled = running;
+          if (running) {
+            $('abort-btn').classList.remove('hidden');
+            $('abort-btn').disabled = false;
+          } else {
+            $('abort-btn').classList.add('hidden');
+          }
+        }
+
+        function updateProgress(done, total) {
+          var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          $('progress-fill').style.width = pct + '%';
+          $('progress-text').textContent = '処理済み ' + done + ' / ' + total + '行';
+        }
+
+        function showNotices(notices) {
+          if (!notices || notices.length === 0) return;
+          var box = $('notices');
+          notices.forEach(function (n) {
+            var div = document.createElement('div');
+            div.className = 'notice';
+            div.textContent = n;
+            box.appendChild(div);
+          });
+        }
+
+        function runBatches(rows) {
+          if (state.running) return;
+          clearBanner();
+          $('notices').innerHTML = '';
+          var options = readOptions();
+          var validationError = validateBeforeRun(options);
+          if (validationError) {
+            showBanner(validationError);
+            return;
+          }
+          if (rows.length === 0) {
+            showBanner('処理対象の行がありません。');
+            return;
+          }
+          var mapping = readMapping();
+          var request = {
+            sheetName: state.init.sheetName,
+            headerRow: state.init.headerRow,
+            mapping: mapping,
+            options: options,
+          };
+          var chunks = chunk(rows, 50);
+          var total = rows.length;
+          var done = 0;
+          state.aborted = false;
+          state.ambiguous = [];
+          renderCandidates();
+          setRunning(true);
+          updateProgress(0, total);
+
+          var i = 0;
+          function next() {
+            if (state.aborted || i >= chunks.length) {
+              setRunning(false);
+              if (state.aborted) showNotices(['中断しました。処理済みの行は保存されています。']);
+              return;
+            }
+            var current = chunks[i];
+            i += 1;
+            var req = {
+              sheetName: request.sheetName,
+              headerRow: request.headerRow,
+              rows: current,
+              mapping: request.mapping,
+              options: request.options,
+            };
+            call('processBatch', req)
+              .then(function (res) {
+                if (res.usage) renderUsage(res.usage);
+                if (res.notices) showNotices(res.notices);
+                if (res.quotaExceeded) {
+                  setRunning(false);
+                  showNotices([
+                    '無料枠の上限に達したため停止しました。来月1日に回復します。今すぐ続けるにはProをご検討ください。',
+                  ]);
+                  return;
+                }
+                done += current.length;
+                updateProgress(done, total);
+                if (res.ambiguous && res.ambiguous.length > 0) {
+                  state.ambiguous = state.ambiguous.concat(res.ambiguous);
+                  renderCandidates();
+                }
+                next();
+              })
+              .catch(function (e) {
+                setRunning(false);
+                showBanner('実行中にエラーが発生しました: ' + e.message);
+              });
+          }
+          next();
+        }
+
+        // ------------------------------------------------------------------
+        // 候補選択（FR-3）
+        // ------------------------------------------------------------------
+        function renderCandidates() {
+          var section = $('candidates-section');
+          var body = $('candidates-body');
+          body.innerHTML = '';
+          if (state.ambiguous.length === 0) {
+            section.classList.add('hidden');
+            return;
+          }
+          section.classList.remove('hidden');
+          state.ambiguous.forEach(function (item, idx) {
+            var wrap = document.createElement('div');
+            wrap.className = 'candidate';
+
+            var head = document.createElement('div');
+            head.className = 'name';
+            head.textContent = item.row + '行目: ' + item.input;
+            wrap.appendChild(head);
+
+            var select = document.createElement('select');
+            item.candidates.forEach(function (c) {
+              var opt = document.createElement('option');
+              opt.value = c.corporateNumber;
+              opt.textContent = c.name + '（' + (c.address || '所在地不明') + '）';
+              select.appendChild(opt);
+            });
+            wrap.appendChild(select);
+
+            var btnRow = document.createElement('div');
+            btnRow.className = 'btn-row';
+            var apply = document.createElement('button');
+            apply.type = 'button';
+            apply.textContent = 'この候補を適用';
+            apply.addEventListener('click', function () {
+              apply.disabled = true;
+              call('applyCandidate', {
+                sheetName: state.init.sheetName,
+                headerRow: state.init.headerRow,
+                row: item.row,
+                corporateNumber: select.value,
+              })
+                .then(function () {
+                  state.ambiguous.splice(idx, 1);
+                  renderCandidates();
+                })
+                .catch(function (e) {
+                  apply.disabled = false;
+                  showBanner('候補の適用に失敗しました: ' + e.message);
+                });
+            });
+            btnRow.appendChild(apply);
+            wrap.appendChild(btnRow);
+
+            body.appendChild(wrap);
+          });
+        }
+
+        // ------------------------------------------------------------------
+        // ライセンス（FR-10）
+        // ------------------------------------------------------------------
+        function renderLicense(license) {
+          var el = $('license-status');
+          if (!license || !license.configured) {
+            el.textContent = 'ライセンス未設定（無料プラン）。Proにアップグレードするとキーが発行されます。';
+            return;
+          }
+          if (license.valid) {
+            var end = license.periodEnd
+              ? new Date(license.periodEnd * 1000).toLocaleDateString('ja-JP')
+              : null;
+            el.textContent = 'Pro 有効' + (end ? '（次回更新: ' + end + '）' : '') + '。';
+          } else if (license.error) {
+            el.textContent = 'ライセンスの確認に失敗しました: ' + license.error;
+          } else {
+            el.textContent = 'このキーは無効か、有効期限が切れています。';
+          }
+        }
+
+        function saveLicense() {
+          var key = $('license-key').value;
+          $('license-save').disabled = true;
+          $('license-status').textContent = '確認中…';
+          call('saveLicenseKey', key)
+            .then(function (license) {
+              renderLicense(license);
+              refreshUsage();
+              $('license-save').disabled = false;
+            })
+            .catch(function (e) {
+              $('license-status').textContent = '';
+              showBanner(e.message);
+              $('license-save').disabled = false;
+            });
+        }
+
+        function clearLicense() {
+          call('clearLicenseKey')
+            .then(function (license) {
+              $('license-key').value = '';
+              renderLicense(license);
+              refreshUsage();
+            })
+            .catch(function (e) {
+              showBanner(e.message);
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // 再実行（FR-8）
+        // ------------------------------------------------------------------
+        function rerun() {
+          if (state.running) return;
+          clearBanner();
+          var start = parseInt($('start-row').value, 10);
+          var end = parseInt($('end-row').value, 10);
+          if (!(start >= 1) || !(end >= start)) {
+            showBanner('開始行・終了行を確認してください。');
+            return;
+          }
           google.script.run
-            .withSuccessHandler(function (message) {
-              show(message, false);
-              btn.disabled = false;
+            .withSuccessHandler(function (rows) {
+              if (!rows || rows.length === 0) {
+                showNotices(['再実行が必要な行はありません（すべて成功済み）。']);
+                return;
+              }
+              runBatches(rows);
             })
-            .withFailureHandler(function (error) {
-              show('エラー: ' + (error && error.message ? error.message : error), true);
-              btn.disabled = false;
+            .withFailureHandler(function (err) {
+              showBanner('再実行対象の取得に失敗しました: ' + (err && err.message ? err.message : err));
             })
-            .sayHello();
+            .getReprocessRows(state.init.sheetName, state.init.headerRow, start, end);
+        }
+
+        // ------------------------------------------------------------------
+        // 初期化
+        // ------------------------------------------------------------------
+        function applyInit(init) {
+          state.init = init;
+          $('sheet-name').value = init.sheetName;
+          $('start-row').value = String(init.startRow);
+          $('end-row').value = String(init.endRow);
+
+          var headers = init.headers || [];
+          populateSelect($('name-col'), headers, init.mapping.nameCol, false);
+          populateSelect($('corp-col'), headers, init.mapping.corpNumCol, true);
+          populateSelect($('reg-col'), headers, init.mapping.regNumCol, true);
+
+          // インボイス機能フラグ（無効時は disabled ＋「準備中」）。
+          if (!init.invoiceEnabled) {
+            $('opt-invoice').checked = false;
+            $('opt-invoice').disabled = true;
+            $('opt-invoice-note').classList.remove('hidden');
+          }
+
+          if (init.usage) {
+            renderUsage(init.usage);
+          } else {
+            $('usage-body').textContent = '使用量を取得できませんでした。';
+            if (init.usageError) showBanner('現在バックエンドが応答していません: ' + init.usageError);
+          }
+
+          renderLicense(init.license);
+        }
+
+        function boot() {
+          call('getSidebarInit')
+            .then(applyInit)
+            .catch(function (e) {
+              showBanner('初期化に失敗しました: ' + e.message);
+            });
+        }
+
+        // イベント配線
+        $('run-btn').addEventListener('click', function () {
+          runBatches(rowRange());
         });
+        $('rerun-btn').addEventListener('click', rerun);
+        $('abort-btn').addEventListener('click', function () {
+          state.aborted = true;
+          $('abort-btn').disabled = true;
+        });
+        $('license-save').addEventListener('click', saveLicense);
+        $('license-clear').addEventListener('click', clearLicense);
+
+        boot();
       })();
     </script>
   </body>
