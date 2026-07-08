@@ -1,14 +1,16 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-08 [F3-3・実装要件] `/license`検証はStripeの`cancel_at_period_end`を尊重し、**解約済みでも当該課金期間の満了まではvalidと判定する**（特商法表記「解約後も当該課金期間の満了までPro機能を利用できます」との一致が必須。review-2026-07-08 §2。P1 Step5で実装）。
+
 - 2026-07-08 [追補v1.1] R3-1により安定ユーザーキーを**UserProperties UUID単独方式**に確定し、Step5のem:/up:/tmp: 3段フォールバック実装を撤去（下記2026-07-08 [§12-5]エントリは無効・履歴として残置）。プロパティ消去による無料枠リセットは許容（対策コードなし）。§12-5の実機検証は`debugUserKeyProbe()`によるUserProperties動作確認に読み替え（TODO継続）。あわせてR3-6（standalone＋版指定デプロイ→clasp.md修正）・R3-3（P1着手時に柱2側実装→再取込み→SYNC.md修正）・R3-7（特商法の提供時期文言を画面表示ベースに）を反映。R3-2のthanksページ/`/license/claim`/再表示フォームとR3-5のCloud Run構成値はbackend実装時（P1）に対応。
 
 - 2026-07-08 [§12-6] 柱2 `packages/gov-clients` をgit subtreeで `packages/jp-corp-core/` に初回取込み（取込元HEAD 7210ce0・split 7adc09f、記録はpackages/jp-corp-core/SYNC.md）。ただし**houjin/gbizinfoクライアントは柱2側Phase2/3で未実装**のため現内容はhttp.ts＋edinet＋houjin fixturesのみ。柱2のworkspace依存が解決不能なためpnpm workspaceには未組込み（backend利用開始時に依存subtree追加かnpm公開待ちかを決定）。
 
 - 2026-07-08 [§12-5] 安定ユーザーキー方式を暫定確定: ①`getActiveUser().getEmail()`非空→`em:`+SHA-256(小文字化email+Script Properties`USER_KEY_SALT`) ②空→UserPropertiesに初回生成UUID（`up:`） ③例外時のみ`tmp:`+`getTemporaryActiveUserKey()`（約30日ローテの劣化モード・最悪でも無料枠の早期回復に留まる）。openid/`getIdentityToken()`はCR-7スコープ3点固定のため不使用。実機検証はclasp疎通後に`debugUserKeyProbe()`で実施しここに結果を追記（TODO）。
 
-- 2026-07-07 [§12-3] 独自ドメインは購入操作が必要なため未取得（TODO: docs/setup/domain-pages.mdの手順で取得→web/CNAME追加→Search Console確認）。LP/PP/ToS/特商法の骨格はweb/に作成しGitHub Pagesワークフローで公開可能な状態。運営者名・問い合わせ先等はTODOプレースホルダ。
+- 2026-07-07 [§12-3] 独自ドメインは購入操作が必要なため未取得（TODO: docs/setup/domain-pages.mdの手順で取得→web/CNAME追加→Search Console確認）。LP/PP/ToS/特商法の骨格はweb/に作成しGitHub Pagesワークフローで公開可能な状態。運営者名・問い合わせ先等はTODOプレースホルダ。→ 人間タスク（Notion『人間のやる事リスト』へ移管済み。リポジトリ側のTODO巡回対象外）
 
-- 2026-07-07 [§12-2] gcloud未導入・GCPコンソール操作は自動化不可→手順をdocs/setup/gcp-oauth.mdにチェックリスト化（スコープ3点をCR-7として明記）。プロジェクト作成〜テストモード設定は手動実施（TODO）。
+- 2026-07-07 [§12-2] gcloud未導入・GCPコンソール操作は自動化不可→手順をdocs/setup/gcp-oauth.mdにチェックリスト化（スコープ3点をCR-7として明記）。プロジェクト作成〜テストモード設定は手動実施（TODO）。→ 人間タスク（Notion『人間のやる事リスト』へ移管済み。リポジトリ側のTODO巡回対象外）
 
 - 2026-07-07 [§12-1] 検証環境: 令和3年10月より提供・アプリIDは本番/検証共用（利用手続書§7）。検証環境の接続先URLは公開仕様書に非掲載→ID発行時の案内メールで確認しdecisions.mdに追記（TODO）。`INVOICE_API_BASE`は環境変数で切替。
 - 2026-07-07 [§12-1] 公表データ更新は1日1回（翌開庁日 午前6時目安・休日除く）→日次より高頻度の再照会に価値なし（ただしCR-3によりキャッシュは不可、都度照会は維持）。
