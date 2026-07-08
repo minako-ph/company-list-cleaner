@@ -93,7 +93,8 @@ export function detectDrift(schema: z.ZodTypeAny, data: unknown): DriftReport {
 
 /**
  * 境界スキーマでパースしつつドリフトを検知する。
- * スキーマは deepPassthrough 前提（buildBoundarySchema で作ること）なので未知フィールドは値に保全される。
+ * 境界スキーマは明示的に `.passthrough()` を付けて定義すること（未知フィールドを値に保全するため。
+ * deepPassthroughは型推論を失うため補助用途）。
  */
 export function parseWithBuffer<S extends z.ZodTypeAny>(
   schema: S,
