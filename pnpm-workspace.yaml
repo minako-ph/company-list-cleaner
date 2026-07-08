@@ -3,5 +3,6 @@ packages:
   - "apps-script"
 
 # esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
-onlyBuiltDependencies:
-  - esbuild
+# pnpm 11 では onlyBuiltDependencies ではなく allowBuilds が有効（pnpm approve-builds esbuild で生成）。
+allowBuilds:
+  esbuild: true
