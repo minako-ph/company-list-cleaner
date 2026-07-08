@@ -23,13 +23,18 @@ function clientWithBody(body: string | Uint8Array) {
 }
 
 describe('EdinetClient.listDocuments', () => {
-  it('一覧fixtureをパースし、ドリフトなし・キーなしpublicUrlを返す', async () => {
-    const body = loadTextFixture(fixturesDir, 'documents.2026-06-30.spec-based.json');
+  it('実採取fixture（2026-06-30）をパースし、ドリフトなし・キーなしpublicUrlを返す', async () => {
+    const body = loadTextFixture(fixturesDir, 'documents.2026-06-30.json');
     const { client, urls } = clientWithBody(body);
 
     const result = await client.listDocuments('2026-06-30');
-    expect(result.documents).toHaveLength(3);
-    expect(result.documents[0]?.docID).toBe('S100XXA1');
+    expect(result.documents).toHaveLength(4);
+    expect(result.documents.map((d) => d.docID)).toEqual([
+      'S100YNCJ',
+      'S100YIZC',
+      'S100YB0U',
+      'S100Y2Q1',
+    ]);
     expect(result.drift.hasDrift).toBe(false);
     // リクエストにはキーを含み、公開URLには含めない
     expect(urls[0]).toContain('Subscription-Key=test-key');
@@ -49,9 +54,7 @@ describe('EdinetClient.listDocuments', () => {
   });
 
   it('未知フィールドを含む応答はドリフトとして報告しつつ値は保全する', async () => {
-    const original = JSON.parse(
-      loadTextFixture(fixturesDir, 'documents.2026-06-30.spec-based.json'),
-    );
+    const original = JSON.parse(loadTextFixture(fixturesDir, 'documents.2026-06-30.json'));
     original.results[0].brandNewField = 'x';
     const { client } = clientWithBody(JSON.stringify(original));
 

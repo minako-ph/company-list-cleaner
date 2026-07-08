@@ -8,6 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./edinet": "./src/edinet/index.ts",
+    "./gbizinfo": "./src/gbizinfo/index.ts",
+    "./houjin": "./src/houjin/index.ts",
     "./http": "./src/http.ts"
   },
   "dependencies": {

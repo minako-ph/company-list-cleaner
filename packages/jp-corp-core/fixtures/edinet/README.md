@@ -1,12 +1,13 @@
 # EDINET fixtures
 
-- `documents.2026-06-30.spec-based.json` — **合成fixture**（EDINET API仕様書の応答形式に基づく。実応答ではない）。
-  EDINET_API_KEY 未設定のため実採取できず先行作成した。TODO: キー設定後に
-  実応答のサニタイズ済みスナップショットへ差し替える（引継書§12-3）。
-- `error.auth.2026-07-07.json` — **実採取**。キーなしリクエストへの実応答
-  （HTTP 200＋ボディ内StatusCode=401）。2026-07-07取得。
-- `document.S100XXA1.csv.spec-based.zip` — **合成fixture**（書類取得API type=5 の応答形式:
-  zip内にUTF-16LE・タブ区切りの jpcrp\*.csv＋jpaud\*.csv）。主要な経営指標等の行を収録。
-  TODO: キー設定後に実応答へ差し替え、財務値の要素IDマップを実データで検証する。
+すべて**実応答のサニタイズ済みスナップショット**（2026-07-08採取、Subscription-Keyは含まれない）。
 
-規約: fixtureにシークレット（Subscription-Key等）を含めない（引継書§13）。
+| ファイル | 内容 |
+|---|---|
+| `documents.2026-06-30.json` | 書類一覧の実応答。metadataは原本のまま（count=909）、**resultsは代表4件にトリミング**: S100YNCJ(連結・証券コードあり120)／S100YIZC(個別120)／S100YB0U(ファンド120)／S100Y2Q1(ファンド160) |
+| `document.S100YIZC.csv.trimmed.zip` | 書類取得type=5の実応答（山口放送・JGAAP個別）。zip内jpcrp CSVを**当期の経営指標等＋jppfs営業利益の行にトリミング**して再zip |
+| `document.S100YNCJ.csv.trimmed.zip` | 同（MS&AD・連結/IFRS併記の保険持株）。セグメント別Member付きcontextの従業員数行を含む（完全一致選別の回帰用） |
+| `error.auth.2026-07-07.json` | キーなしリクエストへの実応答（HTTP 200＋ボディ内StatusCode=401） |
+
+再採取: `actors/edinet-filings/scripts/live-verify.ts`（要EDINET_API_KEY）。
+規約: fixtureにシークレットを含めない（引継書§13）。トリミングは行の削除のみで値の改変はしない。
