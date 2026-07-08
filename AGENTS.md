@@ -7,4 +7,4 @@ OAuthスコープは3点固定（handover §5）。増やすPRは作らない。
 検証: pnpm typecheck && pnpm test（P0でスクリプト整備後、着手前に緑を確認）
 柱1（jp-tender-intel）・柱2（jp-opendata-actors）Phase1の作業と競合したら常にそちらを優先する。
 docs/addendum-v1.1.md は既存3文書の該当節を上書きする正誤表。作業前に必ず読むこと。
-packages/jp-corp-core は柱2のF-1修正（redactUrlForError）を含むHEADを再取込みするまで backend から参照禁止（review-2026-07-08 F3-1。解除条件は同SYNC.md参照）。
+packages/{jp-corp-core,schema-buffer,normalize-jp,testing} は柱2からのsubtree取込み（改変禁止・柱2に還元してから再取込み。記録はpackages/jp-corp-core/SYNC.md）。F3-1の参照禁止柵は2026-07-08の再取込み（F-1修正含む）で解除済み。

@@ -1,6 +1,8 @@
-# backend/ と packages/ は後続Phase（P1）で追加する。
+# backend/ は P1 Step1 で追加する。
+# packages/* は柱2からのsubtree取込み（packages/jp-corp-core/SYNC.md参照・改変禁止）。
 packages:
   - "apps-script"
+  - "packages/*"
 
 # esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
 # pnpm 11 では onlyBuiltDependencies ではなく allowBuilds が有効（pnpm approve-builds esbuild で生成）。

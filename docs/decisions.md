@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-08 [G2完了] 柱2からjp-corp-core（gov-clients: houjin/gbizinfo/F-1含むHEAD `bf435ed`）を再取込みし、schema-buffer・normalize-jp・**testing**を個別subtree取込みして4ディレクトリをpnpm workspaceへ登録（レビューG2は3ディレクトリ指定だが、gov-clientsのdevDependency `@jp-opendata/testing` がworkspace:*のためinstall解決に必須→testingを追加。記録はpackages/jp-corp-core/SYNC.md）。typecheckはルートtsconfig.packages.json（柱2 tsconfig.base.json同一設定）、テストはルートvitest.config.tsで実行（56件緑）。F3-1の参照禁止柵は解除。G1（柱2main bf435ed にhoujin/gbizinfo＋F-1）・G2ともに充足→P1着手可。
+
 - 2026-07-08 [F3-3・実装要件] `/license`検証はStripeの`cancel_at_period_end`を尊重し、**解約済みでも当該課金期間の満了まではvalidと判定する**（特商法表記「解約後も当該課金期間の満了までPro機能を利用できます」との一致が必須。review-2026-07-08 §2。P1 Step5で実装）。
 
 - 2026-07-08 [追補v1.1] R3-1により安定ユーザーキーを**UserProperties UUID単独方式**に確定し、Step5のem:/up:/tmp: 3段フォールバック実装を撤去（下記2026-07-08 [§12-5]エントリは無効・履歴として残置）。プロパティ消去による無料枠リセットは許容（対策コードなし）。§12-5の実機検証は`debugUserKeyProbe()`によるUserProperties動作確認に読み替え（TODO継続）。あわせてR3-6（standalone＋版指定デプロイ→clasp.md修正）・R3-3（P1着手時に柱2側実装→再取込み→SYNC.md修正）・R3-7（特商法の提供時期文言を画面表示ベースに）を反映。R3-2のthanksページ/`/license/claim`/再表示フォームとR3-5のCloud Run構成値はbackend実装時（P1）に対応。
