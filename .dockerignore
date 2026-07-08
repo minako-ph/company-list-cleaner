@@ -1,0 +1,11 @@
+# backend/Dockerfile は workspace ルートをコンテキストにビルドする。
+# 巨大・秘匿・再生成物をコンテキストから除外する。
+**/node_modules
+**/dist
+apps-script/dist
+**/.env
+**/.env.*
+!**/.env.example
+.git
+*.log
+.DS_Store

@@ -1,7 +1,8 @@
-# backend/ は P1 Step1 で追加する。
+# backend/ は P1 Step1 で追加した（Hono + TS の Cloud Run バックエンド）。
 # packages/* は柱2からのsubtree取込み（packages/jp-corp-core/SYNC.md参照・改変禁止）。
 packages:
   - "apps-script"
+  - "backend"
   - "packages/*"
 
 # esbuild は postinstall でネイティブバイナリを取得するためビルド許可が必要。
