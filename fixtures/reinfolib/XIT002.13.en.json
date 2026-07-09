@@ -1,0 +1,21 @@
+{
+  "status": "OK",
+  "data": [
+    {
+      "id": "13101",
+      "name": "Chiyoda Ward"
+    },
+    {
+      "id": "13102",
+      "name": "Chuo Ward"
+    },
+    {
+      "id": "13103",
+      "name": "Minato Ward"
+    },
+    {
+      "id": "13104",
+      "name": "Shinjuku Ward"
+    }
+  ]
+}
