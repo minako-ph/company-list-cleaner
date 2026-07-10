@@ -115,7 +115,10 @@ export async function resolveCompanyName(
     return { ...base, confidence: 'not_found' };
   }
   // 前方一致×あいまい（API既定挙動）。1ページ目のみで判定し、divideは追わない
-  const result = await searcher.searchByName(toFullWidthForQuery(queryName), { mode: 1, target: 1 });
+  const result = await searcher.searchByName(toFullWidthForQuery(queryName), {
+    mode: 1,
+    target: 1,
+  });
   const candidates = result.corporations.filter(isActiveCandidate);
   const candidateCount = Math.max(result.header.count, candidates.length);
   if (candidates.length === 0) {
@@ -126,7 +129,8 @@ export async function resolveCompanyName(
   const inputHasLegalForm = queryName !== trimmed;
   const wanted = normalizeCompanyNameForMatch(inputHasLegalForm ? trimmed : queryName);
   const exactMatches = candidates.filter(
-    (c) => normalizeCompanyNameForMatch(inputHasLegalForm ? c.name : stripLegalForm(c.name)) === wanted,
+    (c) =>
+      normalizeCompanyNameForMatch(inputHasLegalForm ? c.name : stripLegalForm(c.name)) === wanted,
   );
   if (exactMatches.length === 1) {
     const hit = exactMatches[0];
