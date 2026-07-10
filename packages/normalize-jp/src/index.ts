@@ -85,4 +85,230 @@ export const CORPORATE_SUFFIXES: ReadonlyArray<{ ja: string; en: string }> = [
   { ja: '国立大学法人', en: 'National University Corporation' },
 ];
 
-// TODO(#4): 住所EN変換（都道府県・市区町村のローマ字表）は Actor#4 着手時に実装する。
+/**
+ * 府省・機関名の英語辞書（Actor#2 FR-2「府省(英)」の辞書＋ルール変換で使用）。
+ * 対象はgBizINFO担当府省コード一覧（setcodelist.pdf Ver.1.01）の49機関＋実データに出る下位機関。
+ * 訳語は各機関の公式英語名。辞書に無い機関はnull（推測禁止・N-9②準用）。
+ */
+export const MINISTRY_EN: Readonly<Record<string, string>> = {
+  国税庁: 'National Tax Agency',
+  会計検査院: 'Board of Audit of Japan',
+  内閣官房: 'Cabinet Secretariat',
+  人事院: 'National Personnel Authority',
+  内閣府: 'Cabinet Office',
+  宮内庁: 'Imperial Household Agency',
+  国家公安委員会: 'National Public Safety Commission',
+  防衛省: 'Ministry of Defense',
+  金融庁: 'Financial Services Agency',
+  総務省: 'Ministry of Internal Affairs and Communications',
+  法務省: 'Ministry of Justice',
+  外務省: 'Ministry of Foreign Affairs',
+  財務省: 'Ministry of Finance',
+  文部科学省: 'Ministry of Education, Culture, Sports, Science and Technology',
+  厚生労働省: 'Ministry of Health, Labour and Welfare',
+  農林水産省: 'Ministry of Agriculture, Forestry and Fisheries',
+  経済産業省: 'Ministry of Economy, Trade and Industry',
+  国土交通省: 'Ministry of Land, Infrastructure, Transport and Tourism',
+  環境省: 'Ministry of the Environment',
+  消費者庁: 'Consumer Affairs Agency',
+  復興庁: 'Reconstruction Agency',
+  公正取引委員会: 'Japan Fair Trade Commission',
+  個人情報保護委員会: 'Personal Information Protection Commission',
+  特許庁: 'Japan Patent Office',
+  消防庁: 'Fire and Disaster Management Agency',
+  資源エネルギー庁: 'Agency for Natural Resources and Energy',
+  中小企業庁: 'Small and Medium Enterprise Agency',
+  情報処理推進機構: 'Information-technology Promotion Agency, Japan (IPA)',
+  製品評価技術基盤機構: 'National Institute of Technology and Evaluation (NITE)',
+  '国立研究開発法人新エネルギー・産業技術総合開発機構':
+    'New Energy and Industrial Technology Development Organization (NEDO)',
+  '工業所有権情報・研修館':
+    'National Center for Industrial Property Information and Training (INPIT)',
+  中小企業基盤整備機構:
+    'Organization for Small & Medium Enterprises and Regional Innovation, Japan (SMRJ)',
+  '石油天然ガス・金属鉱物資源機構': 'Japan Organization for Metals and Energy Security (JOGMEC)',
+  日本貿易振興機構: 'Japan External Trade Organization (JETRO)',
+  観光庁: 'Japan Tourism Agency',
+  気象庁: 'Japan Meteorological Agency',
+  原子力規制委員会: 'Nuclear Regulation Authority',
+  内閣法制局: 'Cabinet Legislation Bureau',
+  水産庁: 'Fisheries Agency',
+  海上保安庁: 'Japan Coast Guard',
+  スポーツ庁: 'Japan Sports Agency',
+  警察庁: 'National Police Agency',
+  デジタル庁: 'Digital Agency',
+  林野庁: 'Forestry Agency',
+  文化庁: 'Agency for Cultural Affairs',
+  公害等調整委員会: 'Environmental Dispute Coordination Commission',
+  こども家庭庁: 'Children and Families Agency',
+};
+
+/**
+ * 府省・機関名（日本語）→ 英語公式名。ルール: 法人格プレフィックス
+ * （独立行政法人・国立研究開発法人・公益財団法人等）を除いた本体名でも辞書を引く。
+ * 辞書に無い場合はnull（推測禁止）。
+ */
+export function ministryToEnglish(ja: string): string | null {
+  const trimmed = toHalfWidth(ja.trim()).replace(/\s+/g, '');
+  const direct = MINISTRY_EN[trimmed];
+  if (direct !== undefined) return direct;
+  const stripped = trimmed.replace(
+    /^(独立行政法人|国立研究開発法人|公益財団法人|公益社団法人)/,
+    '',
+  );
+  return MINISTRY_EN[stripped] ?? null;
+}
+
+/** 47都道府県のローマ字表（住所EN変換のルール部。Actor#4で使用） */
+export const PREFECTURE_EN: Readonly<Record<string, string>> = {
+  北海道: 'Hokkaido',
+  青森県: 'Aomori',
+  岩手県: 'Iwate',
+  宮城県: 'Miyagi',
+  秋田県: 'Akita',
+  山形県: 'Yamagata',
+  福島県: 'Fukushima',
+  茨城県: 'Ibaraki',
+  栃木県: 'Tochigi',
+  群馬県: 'Gunma',
+  埼玉県: 'Saitama',
+  千葉県: 'Chiba',
+  東京都: 'Tokyo',
+  神奈川県: 'Kanagawa',
+  新潟県: 'Niigata',
+  富山県: 'Toyama',
+  石川県: 'Ishikawa',
+  福井県: 'Fukui',
+  山梨県: 'Yamanashi',
+  長野県: 'Nagano',
+  岐阜県: 'Gifu',
+  静岡県: 'Shizuoka',
+  愛知県: 'Aichi',
+  三重県: 'Mie',
+  滋賀県: 'Shiga',
+  京都府: 'Kyoto',
+  大阪府: 'Osaka',
+  兵庫県: 'Hyogo',
+  奈良県: 'Nara',
+  和歌山県: 'Wakayama',
+  鳥取県: 'Tottori',
+  島根県: 'Shimane',
+  岡山県: 'Okayama',
+  広島県: 'Hiroshima',
+  山口県: 'Yamaguchi',
+  徳島県: 'Tokushima',
+  香川県: 'Kagawa',
+  愛媛県: 'Ehime',
+  高知県: 'Kochi',
+  福岡県: 'Fukuoka',
+  佐賀県: 'Saga',
+  長崎県: 'Nagasaki',
+  熊本県: 'Kumamoto',
+  大分県: 'Oita',
+  宮崎県: 'Miyazaki',
+  鹿児島県: 'Kagoshima',
+  沖縄県: 'Okinawa',
+};
+
+/** 住所文字列の先頭から都道府県を検出し、英語名と残り住所を返す。検出不能はnull */
+export function splitPrefecture(
+  addressJa: string,
+): { prefectureJa: string; prefectureEn: string; rest: string } | null {
+  for (const [ja, en] of Object.entries(PREFECTURE_EN)) {
+    if (addressJa.startsWith(ja)) {
+      return { prefectureJa: ja, prefectureEn: en, rest: addressJa.slice(ja.length) };
+    }
+  }
+  return null;
+}
+
+/** 日本標準産業分類（JSIC）大分類コード→英語名（gBizINFO `industry` の値。Actor#4で使用） */
+export const JSIC_DIVISION_EN: Readonly<Record<string, string>> = {
+  A: 'Agriculture and forestry',
+  B: 'Fisheries',
+  C: 'Mining and quarrying of stone and gravel',
+  D: 'Construction',
+  E: 'Manufacturing',
+  F: 'Electricity, gas, heat supply and water',
+  G: 'Information and communications',
+  H: 'Transport and postal services',
+  I: 'Wholesale and retail trade',
+  J: 'Finance and insurance',
+  K: 'Real estate and goods rental and leasing',
+  L: 'Scientific research, professional and technical services',
+  M: 'Accommodations, eating and drinking services',
+  N: 'Living-related and personal services and amusement services',
+  O: 'Education, learning support',
+  P: 'Medical, health care and welfare',
+  Q: 'Compound services',
+  R: 'Services, n.e.c.',
+  S: 'Government, except elsewhere classified',
+  T: 'Industries unable to classify',
+};
+
+const KANJI_DIGITS: Readonly<Record<string, number>> = {
+  〇: 0,
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+};
+
+const KANJI_UNITS: Readonly<Record<string, number>> = { 十: 10, 百: 100, 千: 1000 };
+
+/**
+ * 漢数字→算用数字（一〜九十九・百・千・万の合成。Actor#5の照合前処理）。
+ * 「二十五」→25、「三百二十一」→321、「一万五千」→15000。
+ * 位取り記法（「一〇五」→105）にも対応。解釈できない並びはnull（推測禁止）。
+ */
+export function kanjiToNumber(input: string): number | null {
+  const text = input.trim();
+  if (text === '') return null;
+  // 位取り記法（数字のみの並び）
+  if ([...text].every((ch) => KANJI_DIGITS[ch] !== undefined)) {
+    return Number([...text].map((ch) => KANJI_DIGITS[ch]).join(''));
+  }
+  let total = 0;
+  let section = 0; // 万未満の積み上げ
+  let digit: number | null = null;
+  for (const ch of text) {
+    if (KANJI_DIGITS[ch] !== undefined) {
+      if (digit !== null) return null; // 「二三十」等
+      digit = KANJI_DIGITS[ch];
+      continue;
+    }
+    const unit = KANJI_UNITS[ch];
+    if (unit !== undefined) {
+      section += (digit ?? 1) * unit;
+      digit = null;
+      continue;
+    }
+    if (ch === '万') {
+      total += (section + (digit ?? 0)) * 10000;
+      if (section + (digit ?? 0) === 0) total += 10000; // 「万」単独
+      section = 0;
+      digit = null;
+      continue;
+    }
+    return null;
+  }
+  return total + section + (digit ?? 0);
+}
+
+/**
+ * 文中の漢数字列を算用数字へ置換する（Actor#5 translated照合の前処理）。
+ * 解釈できない並びは原文のまま残す。「第百十二条」→「第112条」。
+ */
+export function convertKanjiNumerals(text: string): string {
+  return text.replace(/[〇一二三四五六七八九十百千万]+/g, (run) => {
+    const value = kanjiToNumber(run);
+    return value === null ? run : String(value);
+  });
+}
+
+// TODO: 市区町村のローマ字表は未実装（住所ENは都道府県までのルール変換。全市区町村表は保守コストが勝るため見送り）。
