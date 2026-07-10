@@ -11,7 +11,8 @@
     "./gbizinfo": "./src/gbizinfo/index.ts",
     "./houjin": "./src/houjin/index.ts",
     "./reinfolib": "./src/reinfolib/index.ts",
-    "./http": "./src/http.ts"
+    "./http": "./src/http.ts",
+    "./laws": "./src/laws/index.ts"
   },
   "dependencies": {
     "@jp-opendata/normalize-jp": "workspace:*",

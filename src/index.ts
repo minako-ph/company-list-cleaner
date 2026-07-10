@@ -8,6 +8,5 @@ export * from './monitoring.js';
 export * from './edinet/index.js';
 export * from './gbizinfo/index.js';
 export * from './houjin/index.js';
+export * from './laws/index.js';
 export * from './reinfolib/index.js';
-
-// TODO(Phase 4): laws クライアント（JSON＋XMLフォールバック）
