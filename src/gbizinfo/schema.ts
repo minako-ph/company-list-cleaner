@@ -12,15 +12,20 @@ import { z } from '@jp-opendata/schema-buffer';
  * 対象情報のみが残る（research）。そのため基本情報と子APIで hojin-info スキーマを分ける。
  */
 
-/** 補助金レコード SubsidyInfoV2（v1のnote/joint_signatures/subsidy_resourceは削除済み）。 */
+/**
+ * 補助金レコード SubsidyInfoV2（v1のnote/joint_signatures/subsidy_resourceは削除済み）。
+ * 実応答（2026-07-10・docs/research/gbizinfo-subsidy.md）で確認した差分:
+ * - `amount`は文字列で返る（procurementはnumber。エンドポイント間で型が揺れるため両受け）
+ * - `meta-data`は`metadata_flg=true`時にオブジェクト（OpenAPI想定の配列ではない）
+ */
 export const gbizSubsidySchema = z
   .object({
     title: z.string().optional(),
-    amount: z.number().optional(),
+    amount: z.union([z.number(), z.string()]).optional(),
     date_of_approval: z.string().optional(),
     government_departments: z.string().optional(),
     target: z.string().optional(),
-    'meta-data': z.array(z.unknown()).optional(),
+    'meta-data': z.unknown().optional(),
   })
   .passthrough();
 
@@ -28,12 +33,13 @@ export const gbizSubsidySchema = z
 export const gbizProcurementSchema = z
   .object({
     title: z.string().optional(),
-    amount: z.number().optional(),
+    amount: z.union([z.number(), z.string()]).optional(),
     date_of_order: z.string().optional(),
     government_departments: z.string().optional(),
     joint_signatures: z.string().optional(),
     target: z.string().optional(),
-    'meta-data': z.array(z.unknown()).optional(),
+    note: z.string().optional(),
+    'meta-data': z.unknown().optional(),
   })
   .passthrough();
 
@@ -83,18 +89,40 @@ export const gbizProcurementHojinSchema = z
   })
   .passthrough();
 
-/** 共通ラッパーを hojin-info スキーマから組み立てる。 */
+/**
+ * 法人検索 `GET /v2/hojin` の hojin-info（法人プロフィール。補助金レコード自体は含まれない。
+ * name_enは検索応答のみに存在し、基本情報API・子APIには無い＝受給者英名の源）。
+ */
+export const gbizHojinProfileSchema = z
+  .object({
+    corporate_number: z.string(),
+    name: z.string(),
+    name_en: z.string().optional(),
+    postal_code: z.string().optional(),
+    location: z.string().optional(),
+    status: z.string().optional(),
+    number_of_activity: z.string().optional(),
+    update_date: z.string().optional(),
+  })
+  .passthrough();
+
+/**
+ * 共通ラッパーを hojin-info スキーマから組み立てる。
+ * 実応答では検索系で `id: null` が返るため id/message は optional
+ * （真のnullはstripNullStringsでundefinedに正規化される）。
+ */
 export function gbizEnvelopeSchema<S extends z.ZodTypeAny>(info: S) {
   return z
     .object({
-      id: z.string(),
-      message: z.string(),
+      id: z.string().optional(),
+      message: z.string().optional(),
       errors: z.array(z.unknown()).optional(),
       'hojin-infos': z.array(info),
     })
     .passthrough();
 }
 
+export type GbizHojinProfile = z.infer<typeof gbizHojinProfileSchema>;
 export type GbizSubsidy = z.infer<typeof gbizSubsidySchema>;
 export type GbizProcurement = z.infer<typeof gbizProcurementSchema>;
 export type GbizBasicInfo = z.infer<typeof gbizBasicInfoSchema>;

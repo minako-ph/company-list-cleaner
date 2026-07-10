@@ -1,26 +1,29 @@
 import { parseWithBuffer, z, type DriftReport } from '@jp-opendata/schema-buffer';
-import { GovHttpClient, type FetchLike } from '../http.js';
+import { GovHttpClient, HttpStatusError, type FetchLike } from '../http.js';
 import { stripNullStrings } from './normalize.js';
 import {
   gbizBasicInfoSchema,
   gbizEnvelopeSchema,
+  gbizHojinProfileSchema,
   gbizProcurementHojinSchema,
   gbizSubsidyHojinSchema,
   type GbizBasicInfo,
+  type GbizHojinProfile,
   type GbizProcurementHojin,
   type GbizSubsidyHojin,
 } from './schema.js';
 
 /**
- * gBizINFO REST API v2 クライアント（docs/research/gbizinfo-v2.md）。
- * 対象は柱3 FR-6（補助金受給・国等との調達実績）に必要な3エンドポイントのみ:
+ * gBizINFO REST API v2 クライアント（docs/research/gbizinfo-v2.md / gbizinfo-subsidy.md）。
+ * 対象は柱3 FR-6と柱2 Actor#2に必要な4エンドポイントのみ:
+ * - `GET /v2/hojin`（法人検索。Actor#2横断検索・name_en取得）
  * - `GET /v2/hojin/{corporate_number}`（法人基本情報）
  * - `GET /v2/hojin/{corporate_number}/subsidy`（補助金）
  * - `GET /v2/hojin/{corporate_number}/procurement`（調達）
  *
  * 認証はヘッダ `X-hojinInfo-api-token`（コンストラクタで受け取る）。
  * ベースURL末尾スラッシュは500になるため、baseUrlの末尾スラッシュは除去する。
- * 値なし項目 `"Null"` はパース前に undefined へ正規化する（stripNullStrings）。
+ * 値なし項目 `"Null"`・真のnull はパース前に undefined へ正規化する（stripNullStrings）。
  */
 
 const GBIZINFO_BASE_URL = 'https://api.info.gbiz.go.jp/hojin';
@@ -45,6 +48,26 @@ export interface GbizinfoResult<T> {
   publicUrl: string;
 }
 
+/**
+ * 法人検索 `GET /v2/hojin` のクエリ（Actor#2で使う面のみ。docs/research/gbizinfo-subsidy.md）。
+ * pageは1〜10（11以上はAPIが400）、limitは0〜5000。
+ */
+export interface GbizinfoSearchQuery {
+  corporateNumber?: string;
+  name?: string;
+  /** 補助金名称の部分一致 */
+  subsidy?: string;
+  /** 担当府省の内部コード（GBIZ_MINISTRY_CODES。カンマ区切り可） */
+  ministry?: string;
+  /** 出典元: 1調達 2表彰 3届出認定 4補助金 5特許 6財務 */
+  source?: string;
+  page?: number;
+  limit?: number;
+}
+
+/** 法人検索のpage上限（APIは11以上を400で拒否する） */
+export const GBIZINFO_SEARCH_MAX_PAGE = 10;
+
 function normalizeBaseUrl(baseUrl: string): string {
   // 末尾スラッシュは gBizINFO で500を招くため除去する
   return baseUrl.replace(/\/+$/, '');
@@ -66,6 +89,41 @@ export class GbizinfoClient {
         headers: { [API_TOKEN_HEADER]: options.token },
         ...(options.fetchFn ? { fetchFn: options.fetchFn } : {}),
       });
+  }
+
+  /**
+   * `GET /v2/hojin`: 法人検索。0件は404で返るため空結果に写像する（エラー扱いしない）。
+   * 応答は法人プロフィール（name_en含む）のみで、補助金レコード自体は含まれない。
+   */
+  async searchHojin(query: GbizinfoSearchQuery): Promise<GbizinfoResult<GbizHojinProfile>> {
+    const params = new URLSearchParams();
+    if (query.corporateNumber !== undefined) params.set('corporate_number', query.corporateNumber);
+    if (query.name !== undefined) params.set('name', query.name);
+    if (query.subsidy !== undefined) params.set('subsidy', query.subsidy);
+    if (query.ministry !== undefined) params.set('ministry', query.ministry);
+    if (query.source !== undefined) params.set('source', query.source);
+    if (query.page !== undefined) {
+      if (query.page < 1 || query.page > GBIZINFO_SEARCH_MAX_PAGE) {
+        throw new Error(`pageは1〜${GBIZINFO_SEARCH_MAX_PAGE}のみ: ${query.page}`);
+      }
+      params.set('page', String(query.page));
+    }
+    if (query.limit !== undefined) params.set('limit', String(query.limit));
+    const publicUrl = `${this.baseUrl}/v2/hojin?${params.toString()}`;
+    try {
+      return await this.fetchAndParse(publicUrl, gbizHojinProfileSchema);
+    } catch (error) {
+      if (error instanceof HttpStatusError && error.status === 404) {
+        return {
+          id: '',
+          message: '404 - Not Found.',
+          hojinInfos: [],
+          drift: { unknownFields: [], missingFields: [], hasDrift: false },
+          publicUrl,
+        };
+      }
+      throw error;
+    }
   }
 
   /** `GET /v2/hojin/{corporate_number}`: 法人基本情報。 */
@@ -102,8 +160,8 @@ export class GbizinfoClient {
     const cleaned = stripNullStrings(rawParsed);
     const { value, drift } = parseWithBuffer(gbizEnvelopeSchema(infoSchema), cleaned);
     return {
-      id: value.id,
-      message: value.message,
+      id: value.id ?? '',
+      message: value.message ?? '',
       hojinInfos: value['hojin-infos'],
       drift,
       publicUrl,

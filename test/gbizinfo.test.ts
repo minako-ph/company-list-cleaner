@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadTextFixture } from '@jp-opendata/testing';
-import { GbizinfoClient } from '../src/gbizinfo/index.js';
+import { GbizinfoClient, resolveMinistry } from '../src/gbizinfo/index.js';
 import { HttpStatusError, type FetchLike } from '../src/http.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'gbizinfo');
@@ -84,22 +84,65 @@ describe('GbizinfoClient.getBasicInfo', () => {
 });
 
 describe('GbizinfoClient.getSubsidies', () => {
-  it('補助金をパースし、amount/targetの"Null"を正規化する', async () => {
-    const body = loadTextFixture(fixturesDir, 'subsidy.spec-based.json');
+  it('実応答（日立製作所）をパースし、文字列amount・真のnull target・meta-dataオブジェクトを受ける', async () => {
+    const body = loadTextFixture(fixturesDir, 'subsidy.7010001008844.2026-07-10.json');
     const { client, urls } = clientWithBody(body);
 
-    const result = await client.getSubsidies(CORP);
+    const result = await client.getSubsidies('7010001008844');
     const subsidies = result.hojinInfos[0]?.subsidy ?? [];
-    expect(subsidies).toHaveLength(2);
-    expect(subsidies[0]?.title).toBe('ものづくり・商業・サービス生産性向上促進補助金');
-    expect(subsidies[0]?.amount).toBe(10000000);
-    expect(subsidies[0]?.government_departments).toBe('経済産業省 中小企業庁');
-    // "Null" → undefined
-    expect(subsidies[1]?.amount).toBeUndefined();
-    expect(subsidies[1]?.target).toBeUndefined();
-    expect(subsidies[1]?.title).toBe('IT導入補助金');
+    expect(subsidies).toHaveLength(5);
+    // amountは実応答では文字列（docs/research/gbizinfo-subsidy.md）
+    expect(subsidies[0]?.amount).toBe('76846429');
+    expect(subsidies[0]?.government_departments).toBe('資源エネルギー庁');
+    // 真のnull（target）はstripNullStringsでundefinedへ
+    expect(subsidies[0]?.target).toBeUndefined();
     expect(result.drift.hasDrift).toBe(false);
-    expect(urls[0]).toBe('https://api.info.gbiz.go.jp/hojin/v2/hojin/5000012090001/subsidy');
+    expect(urls[0]).toBe('https://api.info.gbiz.go.jp/hojin/v2/hojin/7010001008844/subsidy');
+  });
+
+  it('補助金0件の法人は200＋空配列で返る', async () => {
+    const body = loadTextFixture(fixturesDir, 'subsidy.1180301018771.empty.2026-07-10.json');
+    const { client } = clientWithBody(body);
+    const result = await client.getSubsidies('1180301018771');
+    expect(result.hojinInfos[0]?.subsidy).toEqual([]);
+    expect(result.drift.hasDrift).toBe(false);
+  });
+});
+
+describe('GbizinfoClient.searchHojin', () => {
+  it('法人検索（corporate_number指定）でname_en付きプロフィールを返し、id:nullを受ける', async () => {
+    const body = loadTextFixture(fixturesDir, 'search.7010001008844.2026-07-10.json');
+    const { client, urls } = clientWithBody(body);
+    const result = await client.searchHojin({ corporateNumber: '7010001008844' });
+    expect(result.hojinInfos[0]?.name_en).toBe('Hitachi, Ltd.');
+    expect(result.hojinInfos[0]?.name).toBe('株式会社日立製作所');
+    expect(result.drift.hasDrift).toBe(false);
+    expect(urls[0]).toBe(
+      'https://api.info.gbiz.go.jp/hojin/v2/hojin?corporate_number=7010001008844',
+    );
+  });
+
+  it('source=4×ministryの横断検索応答をパースする', async () => {
+    const body = loadTextFixture(fixturesDir, 'search.source4-ministry26.2026-07-10.json');
+    const { client, urls } = clientWithBody(body);
+    const result = await client.searchHojin({ source: '4', ministry: '26', limit: 5, page: 1 });
+    expect(result.hojinInfos).toHaveLength(5);
+    expect(result.hojinInfos[0]?.corporate_number).toMatch(/^\d{13}$/);
+    expect(urls[0]).toBe(
+      'https://api.info.gbiz.go.jp/hojin/v2/hojin?ministry=26&source=4&page=1&limit=5',
+    );
+  });
+
+  it('0件は404で返るため空結果に写像する（エラーにしない）', async () => {
+    const { client } = clientWithBody('{"id":null,"message":"404 - Not Found.","errors":[]}', 404);
+    const result = await client.searchHojin({ source: '4', ministry: '26' });
+    expect(result.hojinInfos).toEqual([]);
+  });
+
+  it('pageは1〜10のみ（APIが11以上を400で拒否するため事前検証）', async () => {
+    const { client, urls } = clientWithBody('{}');
+    await expect(client.searchHojin({ page: 11 })).rejects.toThrow(/page/);
+    expect(urls).toHaveLength(0);
   });
 });
 
@@ -125,5 +168,25 @@ describe('GbizinfoClient.getProcurements', () => {
 describe('GbizinfoClient コンストラクタ', () => {
   it('トークンが空ならエラー', () => {
     expect(() => new GbizinfoClient({ token: '' })).toThrow(/トークン/);
+  });
+});
+
+describe('resolveMinistry', () => {
+  it('内部コード・日本語名・英語公式名のいずれでも解決できる', () => {
+    expect(resolveMinistry('17')).toMatchObject({ code: '17', ja: '経済産業省' });
+    expect(resolveMinistry('経済産業省')).toMatchObject({
+      code: '17',
+      en: 'Ministry of Economy, Trade and Industry',
+    });
+    expect(resolveMinistry('ministry of economy, trade and industry')).toMatchObject({
+      code: '17',
+    });
+    expect(resolveMinistry('中小企業庁')).toMatchObject({ code: '27' });
+  });
+
+  it('解決できない入力はnull', () => {
+    expect(resolveMinistry('存在しない省')).toBeNull();
+    expect(resolveMinistry('99')).toBeNull();
+    expect(resolveMinistry('')).toBeNull();
   });
 });
