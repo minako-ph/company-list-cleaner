@@ -4,7 +4,7 @@
  * サイドバーが対象行を50行以下に分割して逐次呼ぶ（N-2）。1呼び出しの流れ:
  *   ① 対象行の指定列だけ読む（N-3）
  *   ② /usage/consume（対象行数。不足なら quotaExceeded を返し処理しない）
- *   ③ /resolve（社名→法人番号。exact 自動採用・ambiguous は候補選択待ち）
+ *   ③ /resolve（社名→法人番号。exact/selected 自動採用・ambiguous は候補選択待ち）
  *   ④ /enrich（選択フィールド）
  *   ⑤ doInvoice のとき /invoice（登録番号は T＋法人番号を機械生成 or 既存登録番号列）
  *   ⑥ 結果を新規列へ一括書き込み・ステータス更新（FR-7）
@@ -406,7 +406,13 @@ function runResolve(
     // 既にユーザー指定の法人番号がある行は解決結果で上書きしない。
     if (acc.input.effectiveCorpNumber !== '') return;
 
-    if (row.confidence === 'exact' && row.candidates !== undefined && row.candidates.length === 1) {
+    // exact（完全一致1社）・selected（完全一致なし・候補1社を自動採用）はいずれも一意確定済み
+    // として自動採用する（法人番号を書き込みステータス成功。FR-3・柱2 Step A追従）。
+    if (
+      (row.confidence === 'exact' || row.confidence === 'selected') &&
+      row.candidates !== undefined &&
+      row.candidates.length === 1
+    ) {
       const corp = row.candidates[0].corporateNumber;
       acc.input.effectiveCorpNumber = corp;
       acc.cells.corporateNumber = corp;

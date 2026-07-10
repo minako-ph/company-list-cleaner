@@ -34,6 +34,22 @@ describe('parseResolveResults（防御的パース）', () => {
     expect(parseResolveResults({ results: 'x' })).toEqual([]);
   });
 
+  it('selected（完全一致なし・候補1社を自動採用）を narrow する', () => {
+    const body = {
+      results: [
+        {
+          input: '国税商事',
+          normalized: '国税商事',
+          confidence: 'selected',
+          candidates: [{ corporateNumber: '2040001999902', name: '株式会社国税商事あ', address: '千葉県千葉市中央区' }],
+        },
+      ],
+    };
+    const rows = parseResolveResults(body);
+    expect(rows[0].confidence).toBe('selected');
+    expect(rows[0].candidates?.[0].corporateNumber).toBe('2040001999902');
+  });
+
   it('不正な confidence は undefined に落とす', () => {
     const rows = parseResolveResults({ results: [{ input: 'a', normalized: 'a', confidence: 'weird' }] });
     expect(rows[0].confidence).toBeUndefined();

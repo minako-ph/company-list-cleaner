@@ -12,7 +12,7 @@
 // 型（backend の公開応答に対応）
 // ---------------------------------------------------------------------------
 
-export type ResolveConfidence = 'exact' | 'ambiguous' | 'not_found';
+export type ResolveConfidence = 'exact' | 'selected' | 'ambiguous' | 'not_found';
 
 export interface FieldError {
   readonly code: string;
@@ -166,7 +166,8 @@ function parseFieldError(v: unknown): FieldError | undefined {
 // ---------------------------------------------------------------------------
 
 function parseConfidence(v: string | undefined): ResolveConfidence | undefined {
-  return v === 'exact' || v === 'ambiguous' || v === 'not_found' ? v : undefined;
+  // 'selected'（完全一致なし・候補1社を自動採用）は exact と同様に一意確定済み（FR-3・柱2 Step A追従）。
+  return v === 'exact' || v === 'selected' || v === 'ambiguous' || v === 'not_found' ? v : undefined;
 }
 
 function parseCandidate(v: unknown): ResolveCandidate {

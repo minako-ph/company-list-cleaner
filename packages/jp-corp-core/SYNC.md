@@ -15,6 +15,7 @@
 
 | 日付 | 対象 | 取込元コミット（jp-opendata-actors HEAD） | split コミット | 備考 |
 |---|---|---|---|---|
+| 2026-07-10 | jp-corp-core | `ad46f5a31301344fdff18ca4935432c7cc948a22` | `bf464ed12adc0b0ff77e8afe453d5809fecc6747` | 再取込み（柱2 Step A追従）。**英数字13桁アプリID対応・/4/name実挙動対応（法人格除去クエリ・全角化）・resolveCompanyName更新＋実応答fixture** |
 | 2026-07-10 | testing | `8127e71558c31505f088e1e51098d5b387bd8c13` | `30c86f37134153bd936b636344c8b5d89e4a40fd` | 再取込み（変更なし・split同一） |
 | 2026-07-10 | normalize-jp | `8127e71558c31505f088e1e51098d5b387bd8c13` | `67e864fde8b5651376bc22b79fcc29d16baa851d` | 再取込み |
 | 2026-07-10 | schema-buffer | `8127e71558c31505f088e1e51098d5b387bd8c13` | `c32a2665be3cbbb63f7e7e1d72234bdaaa6ef223` | 再取込み（変更なし・split同一） |

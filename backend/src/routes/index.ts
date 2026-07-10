@@ -22,7 +22,7 @@ import {
 import { createFirestoreQuotaStore } from '../services/firestore.js';
 import { createLicenseService, type LicenseService } from '../services/license.js';
 import { createStripeGateway, type StripeGateway } from '../services/stripeGateway.js';
-import { resolveNames, type SearchByName } from '../services/resolve.js';
+import { resolveNames, type NameSearcher } from '../services/resolve.js';
 import {
   enrichCorporations,
   type EnrichDeps,
@@ -35,6 +35,12 @@ import {
   type ApiSource,
 } from '../services/apiHealth.js';
 import type { InvoiceFetch } from '../clients/invoice.js';
+
+/**
+ * 国税庁アプリケーションIDの形式（英数字13桁）。
+ * 実IDは英字混在（柱2 Step A・2026-07-10実ID確認）。jp-corp-core houjin/client.ts の検証と同一に保つ。
+ */
+const HOUJIN_APP_ID_PATTERN = /^[0-9A-Za-z]{13}$/;
 
 /**
  * ルート登録の集約点。
@@ -146,27 +152,30 @@ function registerResolveRouteFromConfig(
   queue: SerialQueue,
   health: ApiHealthTracker,
 ): void {
-  // HoujinClient のコンストラクタは 13桁 id を要求するため、未設定時は生成しない。
-  const houjinConfigured = /^\d{13}$/.test(config.houjinAppId);
+  // HoujinClient のコンストラクタは英数字13桁の id を要求するため、未設定時は生成しない。
+  // 実IDは英字混在13桁（柱2 Step A・2026-07-10実ID確認。数字のみの旧仮定は誤り）。
+  const houjinConfigured = HOUJIN_APP_ID_PATTERN.test(config.houjinAppId);
   const houjinClient = houjinConfigured
     ? new HoujinClient({ id: config.houjinAppId, http: new GovHttpClient({ intervalMs: 0 }) })
     : undefined;
 
-  // 名称検索は完全一致（target=2）・XML（type=12）。実送信は単一キュー経由（N-1）。
-  // API 呼び出しの成否を health tracker へ記録（N-4）。
-  const search: SearchByName = houjinClient
-    ? (name) =>
-        queue.enqueue(() =>
-          trackApi(health, 'houjin', async () => {
-            const result = await houjinClient.searchByName(name, { type: '12', target: 2 });
-            return result.corporations;
-          }),
-        )
-    : () => Promise.reject(new Error('houjin not configured'));
+  // 名称検索は resolveCompanyName が指定する options（法人格除去クエリ・前方一致×あいまい）で
+  // 送出する。target/mode はここで固定せず委譲側に委ねる（type 未指定時は XML=12 が既定）。
+  // 実送信は単一キュー経由（N-1）。API 呼び出しの成否を health tracker へ記録（N-4）。
+  // 捕捉クロージャは resolveNames（resolveOne）側が per-行で生成するため、この searcher は
+  // ステートレスに共有してよい（並行リクエスト安全）。
+  const searcher: NameSearcher = houjinClient
+    ? {
+        searchByName: (name, options) =>
+          queue.enqueue(() =>
+            trackApi(health, 'houjin', () => houjinClient.searchByName(name, options)),
+          ),
+      }
+    : { searchByName: () => Promise.reject(new Error('houjin not configured')) };
 
   registerResolveRoute(app, {
     houjinConfigured,
-    resolve: (names) => resolveNames(names, search),
+    resolve: (names) => resolveNames(names, searcher),
   });
 }
 
@@ -176,7 +185,7 @@ function registerEnrichRouteFromConfig(
   queue: SerialQueue,
   health: ApiHealthTracker,
 ): void {
-  const houjinClient = /^\d{13}$/.test(config.houjinAppId)
+  const houjinClient = HOUJIN_APP_ID_PATTERN.test(config.houjinAppId)
     ? new HoujinClient({ id: config.houjinAppId, http: new GovHttpClient({ intervalMs: 0 }) })
     : undefined;
 

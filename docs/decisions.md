@@ -1,5 +1,8 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-10 [監査①③・柱2 Step A追従] jp-corp-coreを柱2 HEAD `ad46f5a`で再subtree（英数字13桁ID・法人格除去クエリ・全角化＋実応答fixture。SYNC.md履歴追記）。**柱3側にも数字13桁前提が残存**していたため`backend/src/routes/index.ts`の`/^\d{13}$/`を`/^[0-9A-Za-z]{13}$/`（jp-corp-core client.tsと同一）へ修正——スモークで実IDが`houjin_not_configured`になる実挙動として検出。実HOUJIN_APP_IDスモーク3本合格: 「日立製作所」=exact（株式会社日立製作所 7010001008844）／「トヨタ」=ambiguous候補提示・自動確定なし／ID未設定=503明確エラーで応答・サーバログともID出現ゼロ。**発見TODO**: `node dist/index.js`はworkspaceパッケージがTSソース参照のため起動不可（ERR_UNKNOWN_FILE_EXTENSION）＝Cloud Runデプロイ前にbackendのバンドル化（esbuild等）が必要。スモークはtsx実行で代替。
+
+- 2026-07-10 [監査②・柱2 Step A追従] 社名解決をjp-corp-core `resolveCompanyName`（実データ検証済み・法人格除去クエリ/全角化/あいまい比較対応）へ切替え独自実装（confidence件数判定・正規化名での直接searchByName）を削除、候補リストはsearcherラップで最後のHoujinResultをクロージャ捕捉し整形（exact/selected=解決1社・ambiguous=活性候補[closeDate空・hihyoji≠1]をtoCandidates整形・捕捉はresolveOne毎に独立生成で並行安全）。**confidence語彙差分**: API応答に'selected'（完全一致なし・候補1社を自動採用）が加わり4値に（FR-3語彙と一致。GASのユーザー選択'selected'と同語彙＝いずれも一意確定済みの意。GAS側backendDto.parseConfidence/processBatch.runResolveでselectedをexactと同様に自動採用）。FR-2表示用normalizeCompanyNameは用途が別のため維持（入力→FR-2正規化→解決のチェーン）。
 - 2026-07-10 [監査#2・R3-2整合] sidebar.htmlのライセンス入力placeholder「決済完了メールに記載のキー」→「購入完了ページに表示されたキー」に修正（メール送付はR3-2で廃止済み。grep でメール前提文言の残存ゼロを確認）。
 - 2026-07-10 [監査#1・再subtree] 柱2 HEAD `8127e71`（5287090以降）で4ディレクトリを再取込み（gbizinfo `amount` 文字列→z.union両受けの実データ修正・実応答fixture 2026-07-10採取を取得。schema-buffer/testingはsplit同一＝変更なし。履歴はSYNC.md）。柱2側で`subsidy.spec-based.json`が実応答fixtureへ置換されたため、backend/test/enrich.test.tsを実fixture（`subsidy.7010001008844.2026-07-10.json`・**文字列amountであることをテスト内で担保**）へ更新し、procurement実fixtureのFR-6ケースも追加→緑。
 
