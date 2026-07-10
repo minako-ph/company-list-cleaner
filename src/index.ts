@@ -246,4 +246,69 @@ export const JSIC_DIVISION_EN: Readonly<Record<string, string>> = {
   T: 'Industries unable to classify',
 };
 
+const KANJI_DIGITS: Readonly<Record<string, number>> = {
+  〇: 0,
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+};
+
+const KANJI_UNITS: Readonly<Record<string, number>> = { 十: 10, 百: 100, 千: 1000 };
+
+/**
+ * 漢数字→算用数字（一〜九十九・百・千・万の合成。Actor#5の照合前処理）。
+ * 「二十五」→25、「三百二十一」→321、「一万五千」→15000。
+ * 位取り記法（「一〇五」→105）にも対応。解釈できない並びはnull（推測禁止）。
+ */
+export function kanjiToNumber(input: string): number | null {
+  const text = input.trim();
+  if (text === '') return null;
+  // 位取り記法（数字のみの並び）
+  if ([...text].every((ch) => KANJI_DIGITS[ch] !== undefined)) {
+    return Number([...text].map((ch) => KANJI_DIGITS[ch]).join(''));
+  }
+  let total = 0;
+  let section = 0; // 万未満の積み上げ
+  let digit: number | null = null;
+  for (const ch of text) {
+    if (KANJI_DIGITS[ch] !== undefined) {
+      if (digit !== null) return null; // 「二三十」等
+      digit = KANJI_DIGITS[ch];
+      continue;
+    }
+    const unit = KANJI_UNITS[ch];
+    if (unit !== undefined) {
+      section += (digit ?? 1) * unit;
+      digit = null;
+      continue;
+    }
+    if (ch === '万') {
+      total += (section + (digit ?? 0)) * 10000;
+      if (section + (digit ?? 0) === 0) total += 10000; // 「万」単独
+      section = 0;
+      digit = null;
+      continue;
+    }
+    return null;
+  }
+  return total + section + (digit ?? 0);
+}
+
+/**
+ * 文中の漢数字列を算用数字へ置換する（Actor#5 translated照合の前処理）。
+ * 解釈できない並びは原文のまま残す。「第百十二条」→「第112条」。
+ */
+export function convertKanjiNumerals(text: string): string {
+  return text.replace(/[〇一二三四五六七八九十百千万]+/g, (run) => {
+    const value = kanjiToNumber(run);
+    return value === null ? run : String(value);
+  });
+}
+
 // TODO: 市区町村のローマ字表は未実装（住所ENは都道府県までのルール変換。全市区町村表は保守コストが勝るため見送り）。

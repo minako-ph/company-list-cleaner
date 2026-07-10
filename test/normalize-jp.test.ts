@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  convertKanjiNumerals,
+  kanjiToNumber,
   ministryToEnglish,
   normalizeForVerbatimMatch,
   normalizeWaveDash,
@@ -73,5 +75,39 @@ describe('ministryToEnglish', () => {
   it('辞書に無い機関はnull（推測禁止）', () => {
     expect(ministryToEnglish('公益財団法人食品等流通合理化促進機構')).toBeNull();
     expect(ministryToEnglish('未知の庁')).toBeNull();
+  });
+});
+
+describe('kanjiToNumber', () => {
+  it.each([
+    ['五', 5],
+    ['十', 10],
+    ['十五', 15],
+    ['二十五', 25],
+    ['九十九', 99],
+    ['百', 100],
+    ['百十二', 112],
+    ['三百二十一', 321],
+    ['千', 1000],
+    ['五千三百', 5300],
+    ['一万', 10000],
+    ['十万', 100000],
+    ['一万五千二百十一', 15211],
+    ['一〇五', 105],
+  ])('%s → %d', (input, expected) => {
+    expect(kanjiToNumber(input)).toBe(expected);
+  });
+  it('解釈できない並びはnull（推測禁止）', () => {
+    expect(kanjiToNumber('二三十')).toBeNull();
+    expect(kanjiToNumber('数十')).toBeNull();
+    expect(kanjiToNumber('')).toBeNull();
+  });
+});
+
+describe('convertKanjiNumerals', () => {
+  it('文中の漢数字列を算用数字へ置換する（照合の前処理）', () => {
+    expect(convertKanjiNumerals('第百十二条')).toBe('第112条');
+    expect(convertKanjiNumerals('十万円以下の罰金')).toBe('100000円以下の罰金');
+    expect(convertKanjiNumerals('第二条の三第一項')).toBe('第2条の3第1項');
   });
 });
