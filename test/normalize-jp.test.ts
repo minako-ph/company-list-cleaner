@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ministryToEnglish,
   normalizeForVerbatimMatch,
   normalizeWaveDash,
   parseJpNumber,
@@ -55,5 +56,22 @@ describe('normalizeForVerbatimMatch', () => {
     expect(normalizeForVerbatimMatch('売上高 １，２３４百万円（２０２３～）')).toBe(
       normalizeForVerbatimMatch('売上高1,234百万円(2023〜)'),
     );
+  });
+});
+
+describe('ministryToEnglish', () => {
+  it('府省・機関名を英語公式名へ（辞書）', () => {
+    expect(ministryToEnglish('経済産業省')).toBe('Ministry of Economy, Trade and Industry');
+    expect(ministryToEnglish('中小企業庁')).toBe('Small and Medium Enterprise Agency');
+    expect(ministryToEnglish('資源エネルギー庁')).toBe('Agency for Natural Resources and Energy');
+  });
+  it('法人格プレフィックスを除いた本体名でも引ける（ルール）', () => {
+    expect(ministryToEnglish('独立行政法人情報処理推進機構')).toBe(
+      'Information-technology Promotion Agency, Japan (IPA)',
+    );
+  });
+  it('辞書に無い機関はnull（推測禁止）', () => {
+    expect(ministryToEnglish('公益財団法人食品等流通合理化促進機構')).toBeNull();
+    expect(ministryToEnglish('未知の庁')).toBeNull();
   });
 });
