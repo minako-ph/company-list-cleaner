@@ -12,15 +12,20 @@ import { z } from '@jp-opendata/schema-buffer';
  * 対象情報のみが残る（research）。そのため基本情報と子APIで hojin-info スキーマを分ける。
  */
 
-/** 補助金レコード SubsidyInfoV2（v1のnote/joint_signatures/subsidy_resourceは削除済み）。 */
+/**
+ * 補助金レコード SubsidyInfoV2（v1のnote/joint_signatures/subsidy_resourceは削除済み）。
+ * 実応答（2026-07-10・docs/research/gbizinfo-subsidy.md）で確認した差分:
+ * - `amount`は文字列で返る（procurementはnumber。エンドポイント間で型が揺れるため両受け）
+ * - `meta-data`は`metadata_flg=true`時にオブジェクト（OpenAPI想定の配列ではない）
+ */
 export const gbizSubsidySchema = z
   .object({
     title: z.string().optional(),
-    amount: z.number().optional(),
+    amount: z.union([z.number(), z.string()]).optional(),
     date_of_approval: z.string().optional(),
     government_departments: z.string().optional(),
     target: z.string().optional(),
-    'meta-data': z.array(z.unknown()).optional(),
+    'meta-data': z.unknown().optional(),
   })
   .passthrough();
 
@@ -28,21 +33,29 @@ export const gbizSubsidySchema = z
 export const gbizProcurementSchema = z
   .object({
     title: z.string().optional(),
-    amount: z.number().optional(),
+    amount: z.union([z.number(), z.string()]).optional(),
     date_of_order: z.string().optional(),
     government_departments: z.string().optional(),
     joint_signatures: z.string().optional(),
     target: z.string().optional(),
-    'meta-data': z.array(z.unknown()).optional(),
+    note: z.string().optional(),
+    'meta-data': z.unknown().optional(),
   })
   .passthrough();
 
-/** 法人基本情報 `/v2/hojin/{corporate_number}` の hojin-info。 */
+/**
+ * 法人基本情報 `/v2/hojin/{corporate_number}` の hojin-info。
+ * 実応答（2026-07-10・docs/research/houjin-name-search.md）はOpenAPI定義より項目が多い:
+ * name_en（登録英名＝#4のapi_native源）・industry（JSIC大分類コード配列）・
+ * founding_year・aggregated_year・kind・process を追加。
+ * business_itemsの実値は営業品目コード（例:"104"）であり名称ではない。
+ */
 export const gbizBasicInfoSchema = z
   .object({
     corporate_number: z.string(),
     name: z.string(),
     kana: z.string().optional(),
+    name_en: z.string().optional(),
     location: z.string().optional(),
     postal_code: z.string().optional(),
     status: z.string().optional(),
@@ -55,11 +68,16 @@ export const gbizBasicInfoSchema = z
     capital_stock: z.number().optional(),
     employee_number: z.number().optional(),
     date_of_establishment: z.string().optional(),
+    founding_year: z.number().optional(),
     business_summary: z.string().optional(),
     company_size_male: z.number().optional(),
     company_size_female: z.number().optional(),
     business_items: z.array(z.string()).optional(),
+    industry: z.array(z.string()).optional(),
     qualification_grade: z.string().optional(),
+    aggregated_year: z.string().optional(),
+    kind: z.string().optional(),
+    process: z.string().optional(),
   })
   .passthrough();
 
@@ -83,18 +101,54 @@ export const gbizProcurementHojinSchema = z
   })
   .passthrough();
 
-/** 共通ラッパーを hojin-info スキーマから組み立てる。 */
+/**
+ * 特許API `/patent` の hojin-info。実応答は大企業で数万レコード・数MBに達するため
+ * （日立で19,950件・約12MB）、レコード内容は保持せず件数のみ使う（z.unknown()）。
+ */
+export const gbizPatentHojinSchema = z
+  .object({
+    corporate_number: z.string(),
+    name: z.string(),
+    location: z.string().optional(),
+    patent: z.array(z.unknown()).optional(),
+  })
+  .passthrough();
+
+/**
+ * 法人検索 `GET /v2/hojin` の hojin-info（法人プロフィール。補助金レコード自体は含まれない。
+ * name_enは検索応答のみに存在し、基本情報API・子APIには無い＝受給者英名の源）。
+ */
+export const gbizHojinProfileSchema = z
+  .object({
+    corporate_number: z.string(),
+    name: z.string(),
+    name_en: z.string().optional(),
+    postal_code: z.string().optional(),
+    location: z.string().optional(),
+    status: z.string().optional(),
+    number_of_activity: z.string().optional(),
+    update_date: z.string().optional(),
+  })
+  .passthrough();
+
+/**
+ * 共通ラッパーを hojin-info スキーマから組み立てる。
+ * 実応答では検索系で `id: null` が返るため id/message は optional
+ * （真のnullはstripNullStringsでundefinedに正規化される）。
+ */
 export function gbizEnvelopeSchema<S extends z.ZodTypeAny>(info: S) {
   return z
     .object({
-      id: z.string(),
-      message: z.string(),
+      id: z.string().optional(),
+      message: z.string().optional(),
       errors: z.array(z.unknown()).optional(),
       'hojin-infos': z.array(info),
     })
     .passthrough();
 }
 
+export type GbizHojinProfile = z.infer<typeof gbizHojinProfileSchema>;
+export type GbizPatentHojin = z.infer<typeof gbizPatentHojinSchema>;
 export type GbizSubsidy = z.infer<typeof gbizSubsidySchema>;
 export type GbizProcurement = z.infer<typeof gbizProcurementSchema>;
 export type GbizBasicInfo = z.infer<typeof gbizBasicInfoSchema>;

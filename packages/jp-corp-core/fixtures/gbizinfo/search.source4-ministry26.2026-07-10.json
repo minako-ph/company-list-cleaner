@@ -1,0 +1,57 @@
+{
+    "id": null,
+    "errors": null,
+    "message": "200 - OK.",
+    "hojin-infos": [
+        {
+            "corporate_number": "1000020042021",
+            "name": "石巻市",
+            "name_en": "Ishinomaki City",
+            "postal_code": "9860825",
+            "location": "宮城県石巻市穀町１４－１",
+            "status": "-",
+            "number_of_activity": "132",
+            "update_date": "2018-04-02T00:00:00+09:00"
+        },
+        {
+            "corporate_number": "1000020075426",
+            "name": "楢葉町",
+            "name_en": "Naraha machi",
+            "postal_code": "9790604",
+            "location": "福島県双葉郡楢葉町大字北田字鐘突堂５－６",
+            "status": "-",
+            "number_of_activity": "53",
+            "update_date": "2018-04-03T00:00:00+09:00"
+        },
+        {
+            "corporate_number": "1000020075434",
+            "name": "富岡町",
+            "name_en": "Tomiokamachi",
+            "postal_code": "9791151",
+            "location": "福島県双葉郡富岡町大字本岡字王塚６２２－１",
+            "status": "-",
+            "number_of_activity": "72",
+            "update_date": "2018-04-09T00:00:00+09:00"
+        },
+        {
+            "corporate_number": "1000020320005",
+            "name": "島根県",
+            "name_en": "Shimane",
+            "postal_code": "6900887",
+            "location": "島根県松江市殿町１",
+            "status": "-",
+            "number_of_activity": "1573",
+            "update_date": "2018-04-09T00:00:00+09:00"
+        },
+        {
+            "corporate_number": "1000020380008",
+            "name": "愛媛県",
+            "name_en": "Ehime Prefecture",
+            "postal_code": "7900001",
+            "location": "愛媛県松山市一番町４丁目４－２",
+            "status": "-",
+            "number_of_activity": "1501",
+            "update_date": "2018-04-04T00:00:00+09:00"
+        }
+    ]
+}

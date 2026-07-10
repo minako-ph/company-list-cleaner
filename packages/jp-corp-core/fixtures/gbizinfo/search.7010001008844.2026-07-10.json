@@ -1,0 +1,17 @@
+{
+    "id": null,
+    "errors": null,
+    "message": "200 - OK.",
+    "hojin-infos": [
+        {
+            "corporate_number": "7010001008844",
+            "name": "株式会社日立製作所",
+            "name_en": "Hitachi, Ltd.",
+            "postal_code": "1000005",
+            "location": "東京都千代田区丸の内１丁目６番６号",
+            "status": "-",
+            "number_of_activity": "20399",
+            "update_date": "2018-05-11T00:00:00+09:00"
+        }
+    ]
+}

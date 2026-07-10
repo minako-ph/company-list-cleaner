@@ -1,0 +1,89 @@
+{
+    "id": "7010001008844",
+    "errors": null,
+    "message": "200 - OK.",
+    "hojin-infos": [
+        {
+            "corporate_number": "7010001008844",
+            "name": "株式会社日立製作所",
+            "location": "東京都千代田区丸の内１丁目６番６号",
+            "subsidy": [
+                {
+                    "date_of_approval": "2022-04-01",
+                    "title": "令和４年度固定価格買取制度等の効率的・安定的な運用のための業務（ＲＰＳ管理システム運用業務）",
+                    "amount": "76846429",
+                    "target": null,
+                    "government_departments": "資源エネルギー庁",
+                    "meta-data": {
+                        "key_field": "2022_04_17_20230626_00000038",
+                        "data_quality": "政府連携データ",
+                        "source": "経済産業省",
+                        "import_frequency": "不定期",
+                        "last_acquisition_date": "2023-06-26T00:00:00+09:00",
+                        "last_update_date": "2023-06-29T00:13:15+09:00"
+                    }
+                },
+                {
+                    "date_of_approval": "2022-02-08",
+                    "title": "令和３年度新型コロナウイルス感染症対応医療機関労災給付上乗せ補償保険加入支援事業補助金",
+                    "amount": "547500",
+                    "target": null,
+                    "government_departments": "厚生労働省",
+                    "meta-data": {
+                        "key_field": "2022_04_15_20230626_00012834",
+                        "data_quality": "政府連携データ",
+                        "source": "厚生労働省",
+                        "import_frequency": "不定期",
+                        "last_acquisition_date": "2023-06-26T00:00:00+09:00",
+                        "last_update_date": "2023-06-29T00:13:15+09:00"
+                    }
+                },
+                {
+                    "date_of_approval": "2022-02-08",
+                    "title": "令和３年度新型コロナウイルス感染症対応医療機関労災給付上乗せ補償保険加入支援事業補助金",
+                    "amount": "348000",
+                    "target": null,
+                    "government_departments": "厚生労働省",
+                    "meta-data": {
+                        "key_field": "2022_04_15_20230626_00012711",
+                        "data_quality": "政府連携データ",
+                        "source": "厚生労働省",
+                        "import_frequency": "不定期",
+                        "last_acquisition_date": "2023-06-26T00:00:00+09:00",
+                        "last_update_date": "2023-06-29T00:13:15+09:00"
+                    }
+                },
+                {
+                    "date_of_approval": "2022-01-31",
+                    "title": "令和３年度新型コロナウイルス感染症感染拡大防止・医療提供体制確保支援補助金",
+                    "amount": "250000",
+                    "target": null,
+                    "government_departments": "厚生労働省",
+                    "meta-data": {
+                        "key_field": "2022_04_15_20230626_00014653",
+                        "data_quality": "政府連携データ",
+                        "source": "厚生労働省",
+                        "import_frequency": "不定期",
+                        "last_acquisition_date": "2023-06-26T00:00:00+09:00",
+                        "last_update_date": "2023-06-29T00:13:15+09:00"
+                    }
+                },
+                {
+                    "date_of_approval": "2019-05-10",
+                    "title": "令和元年度平常時及び緊急時における石油需給動向等調査費事業（石油統計調査のシステム的な観点による集計、出力方法等の運用方法改善に関する調査）（国庫債務負担行為に係るもの）",
+                    "amount": "190201119",
+                    "target": null,
+                    "government_departments": "資源エネルギー庁",
+                    "meta-data": {
+                        "key_field": "2022_04_17_20230626_00000117",
+                        "data_quality": "政府連携データ",
+                        "source": "経済産業省",
+                        "import_frequency": "不定期",
+                        "last_acquisition_date": "2023-06-26T00:00:00+09:00",
+                        "last_update_date": "2023-06-29T00:13:15+09:00"
+                    }
+                }
+            ]
+        }
+    ]
+}
