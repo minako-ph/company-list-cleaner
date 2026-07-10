@@ -255,10 +255,15 @@ describe('enrichCorporations（fixture ベース結合・実クライアント /
     });
   });
 
-  it('gBizINFO subsidy fixture で補助金フラグ（有・件数2）を付与する', async () => {
+  it('gBizINFO subsidy 実応答 fixture（amount が文字列）で補助金フラグ（有・件数5）を付与する', async () => {
+    // 実応答（2026-07-10採取・柱2で実データ検証済み）は amount が数値でなく文字列で返る。
+    // gbizinfo スキーマの z.union([number, string]) 対応（柱2 2026-07-10修正）を FR-6 経路で固定する。
+    const fixtureText = readFixture('gbizinfo/subsidy.7010001008844.2026-07-10.json');
+    // fixture 自体が「文字列 amount」を含むことを担保（数値のみの fixture に差し替わったら本テストの意味が失われるため）
+    expect(fixtureText).toMatch(/"amount":\s*"\d+"/);
     const client = new GbizinfoClient({
       token: 'test-token',
-      http: httpReturning(readFixture('gbizinfo/subsidy.spec-based.json')),
+      http: httpReturning(fixtureText),
     });
     const queue = createSerialQueue(1000);
     const gbiz: GbizDep = {
@@ -266,8 +271,29 @@ describe('enrichCorporations（fixture ベース結合・実クライアント /
       getSubsidy: (n) => queue.enqueue(async () => (await client.getSubsidies(n)).hojinInfos[0]),
       getProcurement: async () => undefined,
     };
-    const rows = await enrichCorporations(['5000012090001'], { subsidy: true }, { gbiz });
-    expect(rows[0]?.subsidy).toEqual({ status: 'ok', data: { has: true, recentCount: 2 } });
+    const rows = await enrichCorporations(['7010001008844'], { subsidy: true }, { gbiz });
+    expect(rows[0]?.subsidy).toEqual({ status: 'ok', data: { has: true, recentCount: 5 } });
+  });
+
+  it('gBizINFO procurement 実応答 fixture で調達フラグを付与する（FR-6）', async () => {
+    const client = new GbizinfoClient({
+      token: 'test-token',
+      http: httpReturning(readFixture('gbizinfo/procurement.7010001008844.trimmed.2026-07-10.json')),
+    });
+    const queue = createSerialQueue(1000);
+    const gbiz: GbizDep = {
+      getBasic: async () => undefined,
+      getSubsidy: async () => undefined,
+      getProcurement: (n) =>
+        queue.enqueue(async () => (await client.getProcurements(n)).hojinInfos[0]),
+    };
+    const rows = await enrichCorporations(['7010001008844'], { procurement: true }, { gbiz });
+    const procurement = rows[0]?.procurement;
+    if (procurement?.status !== 'ok') {
+      throw new Error(`procurement が ok でない: ${JSON.stringify(procurement)}`);
+    }
+    expect(procurement.data.has).toBe(true);
+    expect(procurement.data.recentCount).toBeGreaterThan(0);
   });
 });
 

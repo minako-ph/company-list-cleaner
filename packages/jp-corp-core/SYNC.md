@@ -15,6 +15,10 @@
 
 | 日付 | 対象 | 取込元コミット（jp-opendata-actors HEAD） | split コミット | 備考 |
 |---|---|---|---|---|
+| 2026-07-10 | testing | `8127e71558c31505f088e1e51098d5b387bd8c13` | `30c86f37134153bd936b636344c8b5d89e4a40fd` | 再取込み（変更なし・split同一） |
+| 2026-07-10 | normalize-jp | `8127e71558c31505f088e1e51098d5b387bd8c13` | `67e864fde8b5651376bc22b79fcc29d16baa851d` | 再取込み |
+| 2026-07-10 | schema-buffer | `8127e71558c31505f088e1e51098d5b387bd8c13` | `c32a2665be3cbbb63f7e7e1d72234bdaaa6ef223` | 再取込み（変更なし・split同一） |
+| 2026-07-10 | jp-corp-core | `8127e71558c31505f088e1e51098d5b387bd8c13` | `c95f0a2f49911a2225aeef229732e1bdb35162ad` | 再取込み。**gbizinfo `amount` の実データ修正（文字列で返る→z.union両受け）**・実応答fixture（2026-07-10採取）・laws/reinfolibクライアント追加を含む |
 | 2026-07-08 | testing | `bf435ed0f30bd25a896a4e881f1e15a426c8954b` | `30c86f37134153bd936b636344c8b5d89e4a40fd` | 初回取込み（G2。gov-clientsのdevDep解決のためレビュー記載の3ディレクトリに追加） |
 | 2026-07-08 | normalize-jp | `bf435ed0f30bd25a896a4e881f1e15a426c8954b` | `8d7ac0bdc955720d8abdf242adffab6afbab6034` | 初回取込み（G2） |
 | 2026-07-08 | schema-buffer | `bf435ed0f30bd25a896a4e881f1e15a426c8954b` | `c32a2665be3cbbb63f7e7e1d72234bdaaa6ef223` | 初回取込み（G2） |
