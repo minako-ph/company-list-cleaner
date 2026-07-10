@@ -1,0 +1,66 @@
+{
+ "id": "7010001008844",
+ "errors": null,
+ "message": "200 - OK.",
+ "hojin-infos": [
+  {
+   "corporate_number": "7010001008844",
+   "name": "株式会社日立製作所",
+   "location": "東京都千代田区丸の内１丁目６番６号",
+   "patent": [
+    {
+     "patent_type": "特許",
+     "registration_number": "7323903",
+     "application_date": "2023-05-12",
+     "classifications": [
+      {
+       "コード値": "G21F 9/36 501 J",
+       "コード名": "FI分類",
+       "日本語": "核物理；核工学"
+      },
+      {
+       "コード値": "2G079",
+       "コード名": "Fターム-テーマコード"
+      }
+     ],
+     "title": "放射性物質輸送容器",
+     "url": null,
+     "meta-data": {
+      "key_field": "2024_06_24_20240701_10103212",
+      "data_quality": "政府連携データ",
+      "source": "特許庁",
+      "import_frequency": "年次",
+      "last_acquisition_date": "2024-07-01T00:00:00+09:00",
+      "last_update_date": "2024-08-07T00:01:09+09:00"
+     }
+    },
+    {
+     "patent_type": "特許",
+     "registration_number": "7323903",
+     "application_date": "2023-05-12",
+     "classifications": [
+      {
+       "コード値": "G21F 5/08",
+       "コード名": "FI分類",
+       "日本語": "核物理；核工学"
+      },
+      {
+       "コード値": "2G079",
+       "コード名": "Fターム-テーマコード"
+      }
+     ],
+     "title": "放射性物質輸送容器",
+     "url": null,
+     "meta-data": {
+      "key_field": "2024_06_24_20240701_10103210",
+      "data_quality": "政府連携データ",
+      "source": "特許庁",
+      "import_frequency": "年次",
+      "last_acquisition_date": "2024-07-01T00:00:00+09:00",
+      "last_update_date": "2024-08-07T00:01:09+09:00"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -43,12 +43,19 @@ export const gbizProcurementSchema = z
   })
   .passthrough();
 
-/** 法人基本情報 `/v2/hojin/{corporate_number}` の hojin-info。 */
+/**
+ * 法人基本情報 `/v2/hojin/{corporate_number}` の hojin-info。
+ * 実応答（2026-07-10・docs/research/houjin-name-search.md）はOpenAPI定義より項目が多い:
+ * name_en（登録英名＝#4のapi_native源）・industry（JSIC大分類コード配列）・
+ * founding_year・aggregated_year・kind・process を追加。
+ * business_itemsの実値は営業品目コード（例:"104"）であり名称ではない。
+ */
 export const gbizBasicInfoSchema = z
   .object({
     corporate_number: z.string(),
     name: z.string(),
     kana: z.string().optional(),
+    name_en: z.string().optional(),
     location: z.string().optional(),
     postal_code: z.string().optional(),
     status: z.string().optional(),
@@ -61,11 +68,16 @@ export const gbizBasicInfoSchema = z
     capital_stock: z.number().optional(),
     employee_number: z.number().optional(),
     date_of_establishment: z.string().optional(),
+    founding_year: z.number().optional(),
     business_summary: z.string().optional(),
     company_size_male: z.number().optional(),
     company_size_female: z.number().optional(),
     business_items: z.array(z.string()).optional(),
+    industry: z.array(z.string()).optional(),
     qualification_grade: z.string().optional(),
+    aggregated_year: z.string().optional(),
+    kind: z.string().optional(),
+    process: z.string().optional(),
   })
   .passthrough();
 
@@ -86,6 +98,19 @@ export const gbizProcurementHojinSchema = z
     name: z.string(),
     location: z.string().optional(),
     procurement: z.array(gbizProcurementSchema).optional(),
+  })
+  .passthrough();
+
+/**
+ * 特許API `/patent` の hojin-info。実応答は大企業で数万レコード・数MBに達するため
+ * （日立で19,950件・約12MB）、レコード内容は保持せず件数のみ使う（z.unknown()）。
+ */
+export const gbizPatentHojinSchema = z
+  .object({
+    corporate_number: z.string(),
+    name: z.string(),
+    location: z.string().optional(),
+    patent: z.array(z.unknown()).optional(),
   })
   .passthrough();
 
@@ -123,6 +148,7 @@ export function gbizEnvelopeSchema<S extends z.ZodTypeAny>(info: S) {
 }
 
 export type GbizHojinProfile = z.infer<typeof gbizHojinProfileSchema>;
+export type GbizPatentHojin = z.infer<typeof gbizPatentHojinSchema>;
 export type GbizSubsidy = z.infer<typeof gbizSubsidySchema>;
 export type GbizProcurement = z.infer<typeof gbizProcurementSchema>;
 export type GbizBasicInfo = z.infer<typeof gbizBasicInfoSchema>;

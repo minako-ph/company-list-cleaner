@@ -5,10 +5,12 @@ import {
   gbizBasicInfoSchema,
   gbizEnvelopeSchema,
   gbizHojinProfileSchema,
+  gbizPatentHojinSchema,
   gbizProcurementHojinSchema,
   gbizSubsidyHojinSchema,
   type GbizBasicInfo,
   type GbizHojinProfile,
+  type GbizPatentHojin,
   type GbizProcurementHojin,
   type GbizSubsidyHojin,
 } from './schema.js';
@@ -142,6 +144,15 @@ export class GbizinfoClient {
   async getProcurements(corporateNumber: string): Promise<GbizinfoResult<GbizProcurementHojin>> {
     const publicUrl = `${this.baseUrl}/v2/hojin/${this.assertCorporateNumber(corporateNumber)}/procurement`;
     return this.fetchAndParse(publicUrl, gbizProcurementHojinSchema);
+  }
+
+  /**
+   * `GET /v2/hojin/{corporate_number}/patent`: 特許実績。応答は大企業で数MBに達するため
+   * レコード内容は解釈せず、patent_count（件数）用途に限る（docs/research/houjin-name-search.md）。
+   */
+  async getPatents(corporateNumber: string): Promise<GbizinfoResult<GbizPatentHojin>> {
+    const publicUrl = `${this.baseUrl}/v2/hojin/${this.assertCorporateNumber(corporateNumber)}/patent`;
+    return this.fetchAndParse(publicUrl, gbizPatentHojinSchema);
   }
 
   private assertCorporateNumber(corporateNumber: string): string {
