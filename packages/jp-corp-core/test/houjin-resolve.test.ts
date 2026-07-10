@@ -136,6 +136,58 @@ describe('resolveCompanyName', () => {
     expect(result.corporateNumber).toBeNull();
   });
 
+  // 法人格の扱い: APIは法人格を除いた名称に一致させる（2026-07-10実測。
+  // docs/research/houjin-name-search.md）
+  it('クエリは法人格を除去して送出する（法人格込みクエリは0件になるため）', async () => {
+    const searcher = fixtureSearcher();
+    await resolveCompanyName(searcher, '株式会社国税商事あ');
+    expect(searcher.calls).toEqual(['国税商事あ']);
+  });
+
+  it('法人格なし入力は法人格付き登記名とexact一致（日立製作所→株式会社日立製作所）', async () => {
+    const searcher = searcherWith([
+      corporation({ name: '株式会社日立製作所', corporateNumber: '7010001008844' }),
+      corporation({ name: '日立製作所労働組合', corporateNumber: '1010605001151' }),
+    ]);
+    const result = await resolveCompanyName(searcher, '日立製作所');
+    expect(result.confidence).toBe('exact');
+    expect(result.corporateNumber).toBe('7010001008844');
+    expect(result.resolvedName).toBe('株式会社日立製作所');
+  });
+
+  it('法人格違いの同名が複数あればambiguous（トヨタ→株式会社トヨタ/有限会社トヨタ）', async () => {
+    const searcher = searcherWith([
+      corporation({ name: '株式会社トヨタ', corporateNumber: '1000000000001' }),
+      corporation({ name: '有限会社トヨタ', corporateNumber: '1000000000002' }),
+      corporation({ name: 'トヨタ自動車株式会社', corporateNumber: '1000000000003' }),
+    ]);
+    const result = await resolveCompanyName(searcher, 'トヨタ');
+    expect(result.confidence).toBe('ambiguous');
+    expect(result.corporateNumber).toBeNull();
+  });
+
+  it('法人格込み入力は登記名全体で一致判定（有限会社トヨタとは一致しない）', async () => {
+    const searcher = searcherWith([
+      corporation({ name: '株式会社トヨタ', corporateNumber: '1000000000001' }),
+      corporation({ name: '有限会社トヨタ', corporateNumber: '1000000000002' }),
+    ]);
+    const result = await resolveCompanyName(searcher, '株式会社トヨタ');
+    expect(result.confidence).toBe('exact');
+    expect(result.corporateNumber).toBe('1000000000001');
+  });
+
+  it('半角英数の入力は全角化して送出する（/4/nameは全角のみ受付・エラー101）', async () => {
+    const searcher = fixtureSearcher();
+    await resolveCompanyName(searcher, 'ABC商事 (JP)');
+    expect(searcher.calls).toEqual(['ＡＢＣ商事　（ＪＰ）']);
+  });
+
+  it('法人格のみの入力は検索せずnot_found', async () => {
+    const searcher = fixtureSearcher();
+    expect((await resolveCompanyName(searcher, '株式会社')).confidence).toBe('not_found');
+    expect(searcher.calls).toHaveLength(0);
+  });
+
   it('閉鎖済み・非表示レコードは候補から除外する', async () => {
     const searcher = searcherWith([
       corporation({ closeDate: '2020-01-01' }),

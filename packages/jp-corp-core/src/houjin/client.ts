@@ -8,7 +8,8 @@ import { type HoujinCorporation, type HoujinHeader, type HoujinResponseType } fr
 /**
  * 国税庁 法人番号Web-API Ver.4 クライアント（docs/research/houjin-webapi-v4.md）。
  * - 対象は `/4/num`（番号指定・最大10件）と `/4/name`（名称検索）のみ（/diffは非対応）。
- * - 認証はクエリ `id=`（アプリケーションID13桁）。コンストラクタで受け取り、環境変数は直接読まない。
+ * - 認証はクエリ `id=`（アプリケーションID・英数字13桁。実IDで英字混在を確認済み 2026-07-10）。
+ *   コンストラクタで受け取り、環境変数は直接読まない。
  *   `id=` はエラーメッセージ（redactUrlForError）・publicUrl のいずれにも含めない。
  * - 応答は XML(type=12)・CSV(type=01 Shift_JIS/type=02 Unicode)。レート既定1req/秒。
  */
@@ -19,7 +20,7 @@ export const HOUJIN_DEFAULT_INTERVAL_MS = 1_000;
 export const HOUJIN_NUM_MAX = 10;
 
 export interface HoujinClientOptions {
-  /** アプリケーションID（13桁）。クエリ id= として送出する。 */
+  /** アプリケーションID（英数字13桁）。クエリ id= として送出する。 */
   id: string;
   http?: GovHttpClient;
   baseUrl?: string;
@@ -81,8 +82,9 @@ export class HoujinClient {
   private readonly baseUrl: string;
 
   constructor(options: HoujinClientOptions) {
-    if (!/^\d{13}$/.test(options.id)) {
-      throw new Error('アプリケーションIDは13桁の数字のみ');
+    // 実IDは英字混在13桁（2026-07-10到着分で確認。数字のみの旧仮定は誤り）
+    if (!/^[0-9A-Za-z]{13}$/.test(options.id)) {
+      throw new Error('アプリケーションIDは英数字13桁');
     }
     this.id = options.id;
     this.baseUrl = options.baseUrl ?? HOUJIN_BASE_URL;

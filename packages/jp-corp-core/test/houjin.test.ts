@@ -163,7 +163,12 @@ describe('HoujinClient /4/name（名称検索）', () => {
 });
 
 describe('HoujinClient コンストラクタ', () => {
-  it('アプリケーションIDが13桁でなければエラー', () => {
+  it('アプリケーションIDが英数字13桁でなければエラー', () => {
     expect(() => new HoujinClient({ id: 'abc' })).toThrow(/13桁/);
+    expect(() => new HoujinClient({ id: 'KMzABCdef0123!' })).toThrow(/13桁/);
+  });
+
+  it('英字混在13桁のIDを受け付ける（実IDの形式・2026-07-10確認）', () => {
+    expect(() => new HoujinClient({ id: 'KMzAbCdEf0123' })).not.toThrow();
   });
 });
