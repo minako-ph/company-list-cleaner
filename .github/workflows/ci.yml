@@ -41,5 +41,8 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Backend bundle startup smoke (/health)
+        run: pnpm --filter backend smoke
+
       - name: Check OAuth scopes (built dist)
         run: node scripts/check-oauth-scopes.mjs

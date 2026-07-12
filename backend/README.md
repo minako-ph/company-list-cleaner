@@ -38,12 +38,17 @@ Hono + TypeScript（ESM）。GAS アドオンからの HTTPS を受け、公的A
 ```
 pnpm --filter backend typecheck   # tsc --noEmit
 pnpm --filter backend test        # vitest run
-pnpm --filter backend build       # tsc -p tsconfig.build.json → dist/
+pnpm --filter backend build       # node build.mjs = esbuild 依存込み単一バンドル → dist/index.js（型検査は typecheck が担当）
+pnpm --filter backend smoke       # dist/index.js を Secret 未設定で起動し /health 200+JSON を確認（CI にも組込み済み）
 pnpm --filter backend dev         # node --env-file=.env --experimental-strip-types --watch src/index.ts
 ```
 
 `dev` は Node 22 ネイティブ機能のみを使う（`--env-file` で .env 読込 = dotenv 不使用、
 `--experimental-strip-types` で .ts を直接実行 = tsx 等の追加依存不使用）。
+
+`build` は esbuild による**依存込み単一バンドル**（external なし・ESM・sourcemap 同梱・minify なし）。
+`node dist/index.js` がそのまま起動でき、Docker runtime ステージは node_modules を持たない
+（docs/tasks-bundling.md）。
 
 ## 環境変数
 
@@ -121,8 +126,9 @@ openssl pkey -in license_private.pem -pubout -out license_public.pem
 
 ## Docker ビルド
 
-**workspace ルートをビルドコンテキスト**にする（`packages/*` の workspace 依存を後続 Step で使うため。
-`backend/Dockerfile` 冒頭コメント参照）。
+**workspace ルートをビルドコンテキスト**にする（build ステージが `packages/*` の workspace 依存を
+解決するため。`backend/Dockerfile` 冒頭コメント参照）。runtime ステージは esbuild バンドル
+（`dist/index.js`＋sourcemap）のみで動き、node_modules・packages・package.json をコピーしない。
 
 ```
 docker build -f backend/Dockerfile -t company-list-cleaner-backend .
