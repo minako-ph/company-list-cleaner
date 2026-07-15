@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-15 [web] LPを別途用意のデザイン版へ差し替え（縮退公開R3-4の準備中表記・CR-1/2逆検索否定を本文に内包済み。assets/style.cssは法定ページ用に温存）。
+
 - 2026-07-15 [審査提出物] docs/submission/ に3点セット作成（コード変更なし）: OAuthスコープ利用理由書（英・3スコープ各約100語＋想定問答、CR-3非保存/CR-5ログ3点/urlFetchWhitelist明記）／デモ動画絵コンテ（85秒構成・3スコープの利用場面順・撮影前後チェックリスト・キー映り込み確認込み）／Marketplaceリスティング完成稿（日英・縮退公開差分=R3-4のスクショ④非掲載or準備中帯・承認手続中の正直表記）。**短い説明はmarketing.md §5原文が107字で同節の120〜160字要件を満たさないため、事実に基づく最小追記（補助金実績・新規列追記）で125字に調整**（原文トーン不変・marketing.md本体は改訂トリガー未該当のため未変更）。サポート窓口等のTODOは人間タスク確定後に差替え。
 
 - 2026-07-12 [tasks-bundling] backendをesbuild依存込み単一バンドル化（2026-07-10発見TODOの解消）。方式=**ESM＋バナー**（createRequire＝CJS依存のDynamic require対策、＋__dirname/__filename shim＝google-gax(Firestore推移依存)がロード時に__dirname参照するためスモーク実測で追加。CJSフォールバック不要）。runner=**node:22-slim確定**（.node-version/CIと一致。引継書のnode:20記載を上書き）。tsconfig.build.json削除（dist出力の真実はbuild.mjsに一本化・型検査はtsc --noEmitが継続担当）。起動スモーク`backend/scripts/smoke.mjs`（Secret未設定でdist起動→/health 200+JSON・CI組込み）——routes/index.tsがservices/firestore.jsをstatic importするためFirestore SDK込みの全依存バンドル成立とモジュールロードをこの1本で検証。Dockerランタイムはdist/index.js(+map)のみ（node_modulesなし・5.9MB）。docker buildはdaemon不可のためローカル未実施（スモークが代替ゲート）。

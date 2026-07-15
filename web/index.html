@@ -1,160 +1,797 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>会社リストクリーナー — インボイス登録確認・法人番号付与 for Google Sheets</title>
-  <meta name="description" content="取引先リストの社名を正規化し、法人番号・住所・業種を自動付与。適格請求書（インボイス）発行事業者の登録状況も登録番号で一括確認。国税庁・gBizINFOの公式データのみ使用、結果はあなたのシートにだけ保存されます。">
-  <link rel="stylesheet" href="assets/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会社リストクリーナー — インボイス登録確認・法人番号付与 for Google Sheets</title>
+<meta name="description" content="取引先リストの社名を正規化し、法人番号・住所・業種を自動付与。適格請求書（インボイス）発行事業者の登録状況も登録番号で一括確認。国税庁・gBizINFOの公式データのみ使用、結果はあなたのシートにだけ保存されます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   会社リストクリーナー LP — 帳簿（台帳）モチーフ
+   紙:  緑がかった帳簿紙   罫:  緑のレジャー罫線
+   印:  朱（インボイス登録の「登」判子）
+   書体: しっぽり明朝(見出し) / BIZ UDPゴシック(本文) / BIZ UDゴシック(表)
+   ================================================================ */
+:root{
+  --paper:#F6F8F3;
+  --paper-deep:#EEF3EC;
+  --ink:#1E2B26;
+  --ink-muted:#5B6D64;
+  --green:#14614A;
+  --green-deep:#0B4636;
+  --green-cell:#E3EFE6;
+  --rule:#CBD9CF;
+  --rule-soft:#DCE6DD;
+  --shu:#C6381B;          /* 朱肉 */
+  --shu-soft:#F7E4DE;
+  --amber:#8A6A1F;
+  --amber-soft:#F5ECD8;
+  --white:#FFFFFF;
+  --shadow:0 1px 2px rgba(30,43,38,.06), 0 12px 32px -12px rgba(30,43,38,.18);
+  --font-display:"Shippori Mincho", serif;
+  --font-body:"BIZ UDPGothic", sans-serif;
+  --font-data:"BIZ UDGothic", monospace;
+  --wrap:1080px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+body{
+  font-family:var(--font-body);
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.85;
+  font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--green-deep)}
+a:focus-visible,button:focus-visible,summary:focus-visible{
+  outline:3px solid var(--green);outline-offset:3px;border-radius:2px;
+}
+.wrap{max-width:var(--wrap);margin:0 auto;padding:0 24px}
+
+/* ---------------- header ---------------- */
+.site-header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(246,248,243,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rule);
+}
+.site-header .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand-mark{
+  width:30px;height:30px;flex:none;border:2px solid var(--green-deep);border-radius:4px;
+  display:grid;place-items:center;background:var(--white);
+  font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--green-deep);
+  box-shadow:2px 2px 0 var(--green-cell);
+}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:.02em}
+.brand-name small{display:block;font-weight:400;font-size:10.5px;color:var(--ink-muted);letter-spacing:.08em;line-height:1.2}
+.site-nav{margin-left:auto;display:flex;align-items:center;gap:22px}
+.site-nav a{font-size:13.5px;text-decoration:none;color:var(--ink);letter-spacing:.04em}
+.site-nav a:hover{color:var(--green)}
+.nav-cta{
+  background:var(--green-deep);color:var(--white) !important;
+  padding:9px 18px;border-radius:6px;font-weight:700;
+}
+.nav-cta:hover{background:var(--green)}
+@media (max-width:720px){
+  .site-nav a:not(.nav-cta){display:none}
+  .brand-name{font-size:13px;white-space:nowrap}
+  .nav-cta{padding:8px 12px;font-size:12.5px;white-space:nowrap}
+  .site-header .wrap{gap:12px}
+}
+
+/* ---------------- hero（帳簿罫線の上で） ---------------- */
+.hero{
+  position:relative;overflow:hidden;
+  /* レジャーペーパー: 緑の横罫 + 左端の朱の縦罫 */
+  background:
+    linear-gradient(to right, transparent 0, transparent calc(50% - 620px), rgba(198,56,27,.16) calc(50% - 620px), rgba(198,56,27,.16) calc(50% - 618px), transparent calc(50% - 618px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(20,97,74,.09) 31px, rgba(20,97,74,.09) 32px),
+    var(--paper);
+  border-bottom:1px solid var(--rule);
+}
+.hero .wrap{padding-top:72px;padding-bottom:88px}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:700;letter-spacing:.14em;color:var(--green-deep);
+  border:1px solid var(--green);border-radius:999px;padding:5px 14px;background:var(--white);
+}
+.hero-eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+h1{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(30px,4.6vw,50px);line-height:1.42;letter-spacing:.015em;
+  margin:26px 0 20px;
+}
+h1 .kw{
+  background:linear-gradient(transparent 62%, var(--green-cell) 62%);
+  padding:0 2px;
+}
+.hero-lead{max-width:38em;font-size:clamp(15px,1.6vw,17.5px);color:#33443C;margin-bottom:14px}
+.hero-audience{font-size:13.5px;color:var(--ink-muted);margin-bottom:30px}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px}
+.btn{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--font-body);font-weight:700;font-size:15.5px;letter-spacing:.03em;
+  padding:15px 28px;border-radius:8px;text-decoration:none;border:none;cursor:pointer;
+}
+.btn-primary{background:var(--green-deep);color:var(--white);box-shadow:var(--shadow)}
+.btn-primary:hover{background:var(--green);transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(0)}
+.btn-ghost{background:var(--white);color:var(--green-deep);border:1.5px solid var(--green)}
+.btn-ghost:hover{background:var(--green-cell)}
+.hero-note{
+  display:inline-flex;gap:10px;align-items:flex-start;
+  font-size:12.5px;color:var(--amber);background:var(--amber-soft);
+  border:1px solid #E3D3A6;border-radius:8px;padding:10px 14px;max-width:44em;line-height:1.7;
+}
+.hero-note b{flex:none}
+
+/* ---------------- 自動で綺麗になるシート（シグネチャ） ---------------- */
+.sheet-stage{margin-top:56px}
+.sheet-chrome{
+  background:var(--white);border:1px solid var(--rule);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.sheet-bar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px 18px;border-bottom:1px solid var(--rule-soft);background:#FBFCFA;
+}
+.sheet-dots{display:flex;gap:6px}
+.sheet-dots span{width:10px;height:10px;border-radius:50%;background:var(--rule)}
+.sheet-title{font-size:12.5px;color:var(--ink-muted);letter-spacing:.05em}
+.sheet-progress{
+  margin-left:auto;display:flex;align-items:center;gap:10px;min-width:220px;
+}
+.sheet-progress-label{font-size:12px;color:var(--ink-muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sheet-progress-track{flex:1;height:6px;border-radius:99px;background:var(--paper-deep);overflow:hidden;min-width:90px}
+.sheet-progress-fill{height:100%;width:0%;background:var(--green);border-radius:99px;transition:width .7s ease}
+.sheet-scroll{overflow-x:auto}
+table.sheet{
+  width:100%;border-collapse:collapse;min-width:860px;
+  font-family:var(--font-data);font-size:13.5px;line-height:1.6;
+  font-variant-numeric:tabular-nums;
+}
+table.sheet th,table.sheet td{
+  border:1px solid var(--rule-soft);padding:10px 14px;text-align:left;vertical-align:middle;
+  white-space:nowrap;
+}
+table.sheet thead th{
+  background:var(--paper-deep);font-weight:700;font-size:12px;color:#3A4A42;letter-spacing:.04em;
+}
+table.sheet thead th.col-new{background:var(--green-cell);color:var(--green-deep)}
+table.sheet thead th.col-new::before{content:"＋ ";color:var(--green)}
+td.rownum,th.rownum{width:36px;text-align:center;color:var(--ink-muted);background:var(--paper-deep);font-size:11.5px}
+td.dirty{color:#4A4038}
+/* 結果セル: 初期は空 → アニメーションで出現 */
+td.result{color:var(--ink)}
+td.result .val{opacity:0;display:inline-block;transform:translateY(5px)}
+.playing td.result.on .val{
+  opacity:1;transform:translateY(0);
+  transition:opacity .45s ease, transform .45s ease;
+}
+.playing td.result.on{animation:cellflash 1.4s ease}
+@keyframes cellflash{
+  0%{background:var(--green-cell)} 100%{background:transparent}
+}
+td.result .dash{color:var(--rule);opacity:1}
+/* 朱印「登」 */
+.stamp{
+  display:inline-grid;place-items:center;width:26px;height:26px;margin-right:8px;
+  border:2px solid var(--shu);border-radius:50%;color:var(--shu);
+  font-family:var(--font-display);font-weight:700;font-size:13px;
+  transform:rotate(-6deg);vertical-align:middle;background:rgba(198,56,27,.05);
+}
+.playing td.result.on .stamp{animation:stampin .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stampin{
+  0%{transform:rotate(-6deg) scale(1.6);opacity:0}
+  100%{transform:rotate(-6deg) scale(1);opacity:1}
+}
+/* ステータスチップ */
+.chip{
+  display:inline-block;padding:2px 10px;border-radius:4px;
+  font-size:12px;font-weight:700;font-family:var(--font-body);letter-spacing:.03em;
+}
+.chip-ok{background:var(--green-cell);color:var(--green-deep)}
+.chip-wait{background:var(--amber-soft);color:var(--amber)}
+.chip-err{background:var(--shu-soft);color:var(--shu)}
+.sheet-caption{
+  display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;
+  font-size:12.5px;color:var(--ink-muted);margin-top:14px;line-height:1.8;
+}
+.sheet-caption .sample-tag{color:var(--ink-muted)}
+
+/* ---------------- セクション共通（帳簿のインデックスタブ見出し） ---------------- */
+section.block{padding:88px 0}
+section.block.tone{background:var(--white);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.tab-label{
+  display:inline-block;background:var(--green-deep);color:var(--white);
+  font-size:12px;font-weight:700;letter-spacing:.22em;padding:6px 18px 6px 20px;
+  border-radius:3px 10px 3px 3px;   /* 帳簿のインデックスタブ */
+  box-shadow:2px 2px 0 var(--green-cell);
+}
+h2{
+  font-family:var(--font-display);font-weight:700;
+  font-size:clamp(24px,3.2vw,34px);line-height:1.5;letter-spacing:.02em;
+  margin:18px 0 14px;
+}
+.section-lead{max-width:42em;color:#3E4F47;font-size:15.5px;margin-bottom:44px}
+
+/* ---------------- 仕組み: 3ステップ ---------------- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:56px}
+@media (max-width:840px){ .steps{grid-template-columns:1fr} }
+.step{
+  background:var(--white);border:1px solid var(--rule);border-radius:10px;
+  padding:26px 24px;box-shadow:var(--shadow);
+}
+.step-no{
+  font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--green);
+  letter-spacing:.1em;display:block;margin-bottom:10px;
+}
+.step h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.step p{font-size:13.5px;color:#42534B;line-height:1.9}
+
+/* 適法チェーン図 */
+.chain-box{
+  background:var(--white);border:1px solid var(--rule);border-radius:12px;
+  padding:30px 28px;box-shadow:var(--shadow);
+}
+.chain-box h3{font-size:15.5px;font-weight:700;margin-bottom:6px}
+.chain-box .chain-sub{font-size:13px;color:var(--ink-muted);margin-bottom:24px}
+.chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.chain-node{
+  flex:1;min-width:150px;
+  border:1.5px solid var(--rule);border-radius:8px;background:var(--paper);
+  padding:14px 16px;text-align:center;
+}
+.chain-node b{display:block;font-size:14.5px;margin-bottom:2px}
+.chain-node span{font-size:11.5px;color:var(--ink-muted);line-height:1.55;display:block}
+.chain-node.src{border-color:var(--green);background:var(--green-cell)}
+.chain-node.src b{color:var(--green-deep)}
+.chain-arrow{
+  flex:none;display:grid;place-items:center;padding:0 10px;
+  color:var(--green);font-weight:700;font-size:18px;
+}
+@media (max-width:840px){
+  .chain{flex-direction:column}
+  .chain-arrow{transform:rotate(90deg);padding:6px 0}
+}
+.chain-note{font-size:12.5px;color:var(--ink-muted);margin-top:20px;line-height:1.8}
+.chain-branch{
+  margin-top:18px;padding-top:18px;border-top:1px dashed var(--rule);
+  font-size:13px;color:#42534B;line-height:1.9;
+}
+.chain-branch b{color:var(--green-deep)}
+
+/* 付与できる列 */
+.cols-strip{margin-top:44px}
+.cols-strip h3{font-size:15.5px;font-weight:700;margin-bottom:14px}
+.col-chips{display:flex;flex-wrap:wrap;gap:8px}
+.col-chip{
+  font-family:var(--font-data);font-size:12.5px;
+  background:var(--white);border:1px solid var(--rule);border-radius:6px;
+  padding:6px 12px;color:#33443C;
+}
+.col-chip.hl{border-color:var(--green);background:var(--green-cell);color:var(--green-deep);font-weight:700}
+.cols-note{font-size:12.5px;color:var(--ink-muted);margin-top:12px}
+
+/* ---------------- 3本柱 ---------------- */
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media (max-width:840px){ .pillars{grid-template-columns:1fr} }
+.pillar{
+  background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:30px 26px;
+  position:relative;
+}
+.pillar::before{
+  content:"";position:absolute;left:0;top:22px;bottom:22px;width:3px;
+  background:var(--green);border-radius:0 3px 3px 0;
+}
+.pillar h3{
+  font-family:var(--font-display);font-weight:700;font-size:19px;margin-bottom:12px;letter-spacing:.02em;
+}
+.pillar p{font-size:14px;color:#42534B;line-height:1.95}
+
+/* ---------------- 正直明記 ---------------- */
+.honest-list{display:grid;gap:0;border-top:2px solid var(--ink);max-width:820px}
+.honest-item{
+  display:grid;grid-template-columns:96px 1fr;gap:20px;
+  padding:26px 4px;border-bottom:1px solid var(--rule);
+}
+.honest-item dt{
+  font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--green-deep);
+  letter-spacing:.05em;line-height:1.4;white-space:nowrap;
+}
+.honest-item dd{font-size:14.5px;color:#33443C;line-height:1.95}
+@media (max-width:600px){
+  .honest-item{grid-template-columns:1fr;gap:6px}
+}
+
+/* ---------------- 料金 ---------------- */
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:820px}
+@media (max-width:720px){ .plans{grid-template-columns:1fr} }
+.plan{
+  background:var(--white);border:1px solid var(--rule);border-radius:12px;
+  padding:34px 30px;box-shadow:var(--shadow);
+}
+.plan.pro{border:2px solid var(--green-deep)}
+.plan-name{
+  font-family:var(--font-display);font-weight:700;font-size:20px;margin-bottom:4px;
+}
+.plan-for{font-size:12.5px;color:var(--ink-muted);margin-bottom:18px}
+.plan-price{
+  font-family:var(--font-display);font-weight:800;font-size:38px;letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;
+}
+.plan-price small{font-family:var(--font-body);font-weight:400;font-size:13px;color:var(--ink-muted)}
+.plan ul{list-style:none;margin-top:20px;display:grid;gap:10px}
+.plan li{
+  font-size:13.5px;color:#33443C;padding-left:24px;position:relative;line-height:1.8;
+}
+.plan li::before{
+  content:"";position:absolute;left:2px;top:9px;width:10px;height:6px;
+  border-left:2px solid var(--green);border-bottom:2px solid var(--green);transform:rotate(-45deg);
+}
+.pricing-notes{font-size:12.5px;color:var(--ink-muted);margin-top:24px;line-height:2;max-width:820px}
+.pricing-notes a{color:var(--green-deep)}
+
+/* ---------------- FAQ ---------------- */
+.faq-list{max-width:820px;border-top:2px solid var(--ink)}
+.faq-list details{border-bottom:1px solid var(--rule)}
+.faq-list summary{
+  cursor:pointer;list-style:none;display:flex;gap:16px;align-items:baseline;
+  padding:22px 4px;font-weight:700;font-size:15.5px;
+}
+.faq-list summary::-webkit-details-marker{display:none}
+.faq-q{color:var(--green-deep);font-family:var(--font-display);font-weight:800;flex:none}
+.faq-toggle{margin-left:auto;color:var(--green);font-weight:400;flex:none;transition:transform .25s}
+details[open] .faq-toggle{transform:rotate(45deg)}
+.faq-a{padding:0 4px 24px 40px;font-size:14px;color:#42534B;line-height:1.95}
+.faq-a a{color:var(--green-deep)}
+
+/* ---------------- CTA ---------------- */
+.cta-block{
+  background:var(--green-deep);color:var(--white);
+  /* 深緑の帳簿罫線 */
+  background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(255,255,255,.05) 31px, rgba(255,255,255,.05) 32px);
+}
+.cta-block .wrap{padding:88px 24px;text-align:center}
+.cta-block h2{color:var(--white);margin-top:0}
+.cta-block p{color:#C6DAD0;font-size:14.5px;max-width:36em;margin:0 auto 34px}
+.btn-invert{background:var(--white);color:var(--green-deep);font-size:16px;padding:17px 34px}
+.btn-invert:hover{background:var(--green-cell);transform:translateY(-1px)}
+.cta-small{margin-top:18px;font-size:12px;color:#9DBCAF}
+
+/* ---------------- 出典・フッター ---------------- */
+.sources{background:var(--paper-deep);border-top:1px solid var(--rule)}
+.sources .wrap{padding:56px 24px}
+.sources h2{font-size:16px;margin:14px 0 18px}
+.sources p{
+  font-size:12.5px;color:var(--ink-muted);line-height:2;max-width:60em;
+  padding-left:16px;border-left:2px solid var(--rule);margin-bottom:12px;
+}
+.site-footer{background:var(--paper-deep);border-top:1px solid var(--rule)}
+.site-footer .wrap{
+  padding:34px 24px;display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;
+  font-size:12.5px;color:var(--ink-muted);
+}
+.site-footer nav{display:flex;flex-wrap:wrap;gap:20px}
+.site-footer a{color:var(--ink-muted);text-decoration:none}
+.site-footer a:hover{color:var(--green-deep);text-decoration:underline}
+.site-footer .copyright{margin-left:auto}
+
+/* ---------------- スクロールリビール ---------------- */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  .sheet-progress-fill{transition:none}
+  .playing td.result.on{animation:none}
+  .playing td.result.on .val{transition:none}
+  .playing td.result.on .stamp{animation:none}
+  .btn-primary:hover,.btn-invert:hover{transform:none}
+}
+</style>
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <p class="site-title">会社リストクリーナー for Google Sheets</p>
-      <nav class="site-nav">
-        <a href="#pricing">料金</a>
-        <a href="#faq">FAQ</a>
-        <a href="#cta">導入する</a>
-      </nav>
-    </div>
-  </header>
 
-  <!-- 統一メッセージ（marketing.md §4） -->
-  <div class="hero">
-    <div class="wrap">
-      <h1>取引先リストの整備を、<br>スプレッドシートから出ずに。</h1>
-      <p class="lead">
-        社名の表記ゆれ統一・法人番号の自動付与・インボイス登録の一括確認を、公式データだけで。
-        経理・営業担当の方の「取引先リスト整備」を、Google スプレッドシート上でそのまま解決します。
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-mark">整</span>
+      <span class="brand-name">会社リストクリーナー
+        <small>for Google Sheets</small>
+      </span>
+    </a>
+    <nav class="site-nav" aria-label="サイト内">
+      <a href="#how">仕組み</a>
+      <a href="#pillars">特長</a>
+      <a href="#pricing">料金</a>
+      <a href="#faq">FAQ</a>
+      <a class="nav-cta" href="#cta">Marketplaceで入手</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<div class="hero" id="top">
+  <div class="wrap">
+    <span class="hero-eyebrow">Google Sheets™ エディタアドオン</span>
+    <h1>取引先リストの整備を、<br><span class="kw">スプレッドシートから出ずに。</span></h1>
+    <p class="hero-lead">
+      社名の表記ゆれ統一・法人番号の自動付与・インボイス登録の一括確認を、公式データだけで。
+      エクスポートして、別ツールに通して、また取り込む——そのループを、いつものシートの上で終わらせます。
+    </p>
+    <p class="hero-audience">中小企業の経理・営業・バックオフィス担当の方へ。</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#cta">Marketplace で入手する</a>
+      <a class="btn btn-ghost" href="#pricing">料金を見る（無料枠あり）</a>
+    </div>
+    <p class="hero-note"><b>ご案内:</b>インボイス登録確認は国税庁の承認手続中のため準備中です。社名の正規化・法人番号の付与・企業情報の付与は先行してご利用いただけます。承認され次第、アプリ内でお知らせします。</p>
+
+    <!-- シグネチャ: 自動で整っていくシート -->
+    <div class="sheet-stage">
+      <div class="sheet-chrome">
+        <div class="sheet-bar">
+          <span class="sheet-dots"><span></span><span></span><span></span></span>
+          <span class="sheet-title">取引先マスタ 2026-07 — サイドバーから実行</span>
+          <div class="sheet-progress" role="status" aria-live="off">
+            <span class="sheet-progress-label" id="progress-label">待機中</span>
+            <span class="sheet-progress-track"><span class="sheet-progress-fill" id="progress-fill"></span></span>
+          </div>
+        </div>
+        <div class="sheet-scroll">
+          <table class="sheet" id="demo-sheet" aria-label="動作デモ: 汚れた取引先リストが整っていく様子（サンプルデータ）">
+            <thead>
+              <tr>
+                <th class="rownum" aria-label="行番号"></th>
+                <th>社名（入力のまま）</th>
+                <th class="col-new">正規化社名</th>
+                <th class="col-new">法人番号(結果)</th>
+                <th class="col-new">インボイス登録</th>
+                <th class="col-new">ステータス</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="rownum">2</td>
+                <td class="dirty">（株）ｻﾝﾌﾟﾙ商事</td>
+                <td class="result" data-ph="1"><span class="val">株式会社サンプル商事</span></td>
+                <td class="result" data-ph="2"><span class="val">4010001234567</span></td>
+                <td class="result" data-ph="3"><span class="val"><span class="stamp" aria-hidden="true">登</span>登録済（T4010001234567）</span></td>
+                <td class="result" data-ph="4"><span class="val"><span class="chip chip-ok">成功</span></span></td>
+              </tr>
+              <tr>
+                <td class="rownum">3</td>
+                <td class="dirty">ﾔﾏｶﾜ精機　株式会社</td>
+                <td class="result" data-ph="1"><span class="val">ヤマカワ精機株式会社</span></td>
+                <td class="result" data-ph="2"><span class="val">9013301234568</span></td>
+                <td class="result" data-ph="3"><span class="val"><span class="stamp" aria-hidden="true">登</span>登録済（T9013301234568）</span></td>
+                <td class="result" data-ph="4"><span class="val"><span class="chip chip-ok">成功</span></span></td>
+              </tr>
+              <tr>
+                <td class="rownum">4</td>
+                <td class="dirty">ミドリ物産(株)</td>
+                <td class="result" data-ph="1"><span class="val">ミドリ物産株式会社</span></td>
+                <td class="result" data-ph="2"><span class="val">6011101234569</span></td>
+                <td class="result" data-ph="3"><span class="val"><span class="stamp" aria-hidden="true">登</span>登録済（T6011101234569）</span></td>
+                <td class="result" data-ph="4"><span class="val"><span class="chip chip-ok">成功</span></span></td>
+              </tr>
+              <tr>
+                <td class="rownum">5</td>
+                <td class="dirty">ツバキ工業</td>
+                <td class="result" data-ph="1"><span class="val">ツバキ工業</span></td>
+                <td class="result" data-ph="2"><span class="val">候補2件 — 所在地から選択</span></td>
+                <td class="result" data-ph="3"><span class="dash">—</span></td>
+                <td class="result" data-ph="4"><span class="val"><span class="chip chip-wait">候補選択待ち</span></span></td>
+              </tr>
+              <tr>
+                <td class="rownum">6</td>
+                <td class="dirty">山田太郎（個人事業主）</td>
+                <td class="result" data-ph="1"><span class="val">山田太郎</span></td>
+                <td class="result" data-ph="2"><span class="dash">—</span></td>
+                <td class="result" data-ph="3"><span class="dash">—</span></td>
+                <td class="result" data-ph="4"><span class="val"><span class="chip chip-err">エラー: T番号の入力が必要</span></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="sheet-caption">
+        <span>動作の流れ: 社名を正規化 → 法人番号を自動付与 → 登録番号（T＋13桁）でインボイス登録状況を照会します。社名から直接インボイス登録を検索するものではありません。</span>
+        <span class="sample-tag">※画面はサンプルデータによるイメージです</span>
       </p>
     </div>
   </div>
+</div>
 
-  <main>
-    <!-- デモ（30秒デモGIFプレースホルダ） -->
-    <section>
-      <div class="wrap">
-        <h2>30秒でわかる動き</h2>
-        <div class="demo-placeholder">
-          デモGIF（プレースホルダ）<br>
-          <!-- TODO: 30秒デモGIFを web/assets/ に配置し img で差し替える -->
-          汚い取引先リスト → 正規化 → 法人番号・住所・業種を付与 → インボイス登録状況を確認
-        </div>
-        <p style="font-size:0.9rem;color:var(--fg-muted);">
-          動作の流れ: 社名を正規化 → 法人番号を自動付与 → 付与された登録番号（T＋13桁）で
-          インボイス登録状況を照会します。社名から直接インボイス登録を検索するものではありません。
-        </p>
+<main>
+
+<!-- ============ 仕組み ============ -->
+<section class="block" id="how">
+  <div class="wrap">
+    <span class="tab-label reveal">仕組み</span>
+    <h2 class="reveal">3ステップ、シートの中で完結。</h2>
+    <p class="section-lead reveal">サイドバーを開いて列を選ぶだけ。結果は新しい列として書き足されるので、元のデータはそのまま残ります。</p>
+
+    <div class="steps">
+      <div class="step reveal">
+        <span class="step-no">STEP 1</span>
+        <h3>列を選ぶ</h3>
+        <p>サイドバーで社名列（あれば法人番号・登録番号の列）を指定します。ヘッダーから自動で推定するので、確認して直すだけで始められます。</p>
       </div>
-    </section>
-
-    <!-- 差別化3本柱（marketing.md §4） -->
-    <section>
-      <div class="wrap">
-        <h2>3つの特長</h2>
-        <div class="pillars">
-          <div class="pillar">
-            <h3>公式データのみ</h3>
-            <p>国税庁（法人番号・インボイス公表情報）と経済産業省 gBizINFO のみを使用。推測や外部DBの継ぎ接ぎではありません。</p>
-          </div>
-          <div class="pillar">
-            <h3>保存しない設計</h3>
-            <p>照会結果はあなたのシートにだけ書き込まれ、運営側サーバには保存されません（国税庁への届出内容そのまま）。</p>
-          </div>
-          <div class="pillar">
-            <h3>シートから出ない</h3>
-            <p>エクスポート → 別ツール → 再取込のループが不要。経理・営業の月次動線にそのまま入ります。</p>
-          </div>
-        </div>
+      <div class="step reveal">
+        <span class="step-no">STEP 2</span>
+        <h3>実行する</h3>
+        <p>50行ずつ自動で分割して処理し、進捗を表示します。1行の失敗で全体は止まりません。あとから「エラー行だけ再実行」もできます。</p>
       </div>
-    </section>
+      <div class="step reveal">
+        <span class="step-no">STEP 3</span>
+        <h3>新しい列で受け取る</h3>
+        <p>結果は新規列として追記し、既存のセルは上書きしません。行ごとのステータス列（成功／候補選択待ち／エラー理由）で結果を確認できます。</p>
+      </div>
+    </div>
 
-    <!-- 正直明記3点（marketing.md §4・必須） -->
-    <section class="honest">
-      <div class="wrap">
-        <h2>正直にお伝えする3点</h2>
+    <div class="chain-box reveal">
+      <h3>照会は、届出済みの正確な手順だけで行います</h3>
+      <p class="chain-sub">インボイス登録の確認は、常に「登録番号」で照会します。社名から直接検索することはありません。</p>
+      <div class="chain">
+        <div class="chain-node"><b>社名</b><span>表記ゆれを正規化</span></div>
+        <div class="chain-arrow" aria-hidden="true">→</div>
+        <div class="chain-node src"><b>法人番号</b><span>国税庁 法人番号Web-API<br>（名称検索）で解決</span></div>
+        <div class="chain-arrow" aria-hidden="true">→</div>
+        <div class="chain-node"><b>登録番号</b><span>T＋13桁を機械生成</span></div>
+        <div class="chain-arrow" aria-hidden="true">→</div>
+        <div class="chain-node src"><b>登録状況</b><span>国税庁 インボイス公表<br>Web-APIに登録番号で照会</span></div>
+      </div>
+      <div class="chain-branch">
+        <b>企業情報の付与:</b> 解決した法人番号をキーに、所在地・法人種別（法人番号API）に加えて、業種・設立年月日・従業員数・補助金/調達実績（経済産業省 gBizINFO）を選択式で付与できます。
+      </div>
+      <p class="chain-note">一意に定まらない社名は候補リスト（名称・所在地）を提示し、あなたが選択します。すべての行に確度（完全一致／選択済み／候補あり／見つからず）が付きます。</p>
+    </div>
+
+    <div class="cols-strip reveal">
+      <h3>付与される列（すべて新規列として追記）</h3>
+      <div class="col-chips">
+        <span class="col-chip hl">正規化社名</span>
+        <span class="col-chip hl">法人番号(結果)</span>
+        <span class="col-chip">所在地(結果)</span>
+        <span class="col-chip">法人種別</span>
+        <span class="col-chip">業種(gBizINFO)</span>
+        <span class="col-chip">設立年月日(gBizINFO)</span>
+        <span class="col-chip">従業員数(gBizINFO)</span>
+        <span class="col-chip">補助金</span>
+        <span class="col-chip">調達実績</span>
+        <span class="col-chip hl">インボイス登録</span>
+        <span class="col-chip">ステータス</span>
+      </div>
+      <p class="cols-note">必要な列だけ選んで付与できます。「インボイス登録」列は国税庁の承認手続完了後に利用可能になります。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3本柱 ============ -->
+<section class="block tone" id="pillars">
+  <div class="wrap">
+    <span class="tab-label reveal">特長</span>
+    <h2 class="reveal">安心して任せられる、3つの理由。</h2>
+    <p class="section-lead reveal">派手な機能ではなく、取引先データを扱う道具として信頼できることを最優先に設計しています。</p>
+    <div class="pillars">
+      <div class="pillar reveal">
+        <h3>公式データのみ</h3>
+        <p>使うのは国税庁（法人番号・インボイス公表情報）と経済産業省 gBizINFO だけ。推測や外部データベースの継ぎ接ぎではありません。出典はアプリ内とこのページに常時明記しています。</p>
+      </div>
+      <div class="pillar reveal">
+        <h3>保存しない設計</h3>
+        <p>照会結果はあなたのシートにだけ書き込まれ、運営側のサーバには保存されません（都度取得・都度破棄）。国税庁へ届け出た設計そのままです。読み取るのも、あなたが指定した列の値だけです。</p>
+      </div>
+      <div class="pillar reveal">
+        <h3>シートから出ない</h3>
+        <p>エクスポート → 別ツール → 再取込のループを消します。権限も「開いているスプレッドシートの操作」など最小限の3つだけ。GmailやDrive全体へのアクセスは求めません。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 正直明記 ============ -->
+<section class="block" id="honest">
+  <div class="wrap">
+    <span class="tab-label reveal">正直明記</span>
+    <h2 class="reveal">先に、できないことをお伝えします。</h2>
+    <p class="section-lead reveal">導入してから「思っていたのと違う」とならないように。この3点は仕様上の制約です。</p>
+    <dl class="honest-list reveal">
+      <div class="honest-item">
+        <dt>其の一</dt>
+        <dd>個人事業主の取引先は、登録番号（T番号）がリストにある場合のみ照会できます。個人事業主の登録番号は法人番号から導き出せないためです。</dd>
+      </div>
+      <div class="honest-item">
+        <dt>其の二</dt>
+        <dd>企業情報の付与範囲は gBizINFO の収録分（約400万法人）です。国内の全法人を網羅するものではありません。</dd>
+      </div>
+      <div class="honest-item">
+        <dt>其の三</dt>
+        <dd>本サービスは、国税庁・経済産業省の保証を受けたものではありません（各データの出典指定文言は本ページ下部に掲載しています）。</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ 料金 ============ -->
+<section class="block tone" id="pricing">
+  <div class="wrap">
+    <span class="tab-label reveal">料金</span>
+    <h2 class="reveal">小規模なら無料のまま。毎月の作業なら Pro。</h2>
+    <p class="section-lead reveal">比べていただきたいのは、毎月の手作業1〜2時間です。値引きや期間セールは行いません。</p>
+    <div class="plans">
+      <div class="plan reveal">
+        <p class="plan-name">Free</p>
+        <p class="plan-for">まず試したい方・小規模なリストの方に</p>
+        <p class="plan-price">¥0</p>
         <ul>
-          <li>個人事業主の取引先は、登録番号（T番号）がリストにある場合のみ照会可能です。個人事業主の登録番号は法人番号から導き出せないためです。</li>
-          <li>企業情報の付与範囲は gBizINFO の収録分（約400万法人）です。国内の全法人を網羅（悉皆）するものではありません。</li>
-          <li>本サービスは、国税庁・経済産業省の保証を受けたものではありません（各データの出典指定文言は本ページ下部に掲載しています）。</li>
+          <li>月50行まで処理できます</li>
+          <li>全機能を利用できます（量の制限のみ）</li>
+          <li>当月の使用量と残数をサイドバーに常時表示</li>
+          <li>毎月1日に50行分が回復します</li>
         </ul>
       </div>
-    </section>
-
-    <!-- 料金 -->
-    <section id="pricing">
-      <div class="wrap">
-        <h2>料金</h2>
-        <div class="plans">
-          <div class="plan">
-            <h3>Free</h3>
-            <p class="price">¥0</p>
-            <p>月50行まで。全機能を利用できます（量の制限のみ）。小規模なら無料で完結します。</p>
-          </div>
-          <div class="plan pro">
-            <h3>Pro</h3>
-            <p class="price">¥1,480 <small>/ 月（税込）</small></p>
-            <p>月10,000行までのフェアユース上限。上限を超える場合は個別にご相談ください。</p>
-          </div>
-        </div>
-        <p style="font-size:0.9rem;color:var(--fg-muted);margin-top:16px;">
-          ライセンスキーを忘れた方は<a href="license-recover.html">こちら</a>から再表示できます。
-        </p>
+      <div class="plan pro reveal">
+        <p class="plan-name">Pro</p>
+        <p class="plan-for">月次の支払前確認・リスト整備を回す方に</p>
+        <p class="plan-price">¥1,480 <small>/ 月（税込）</small></p>
+        <ul>
+          <li>月10,000行までのフェアユース上限</li>
+          <li>上限を超える場合は個別にご相談ください</li>
+          <li>ライセンスキーは Google アカウントに紐づきます</li>
+          <li>解約は Stripe カスタマーポータルからいつでも</li>
+        </ul>
       </div>
-    </section>
-
-    <!-- FAQ 5問 -->
-    <section id="faq">
-      <div class="wrap">
-        <h2>よくある質問</h2>
-        <dl class="faq">
-          <dt>T番号がない個人事業主の取引先は確認できますか？</dt>
-          <dd>登録番号（T番号）がリストにある場合のみ照会できます。個人事業主の登録番号は法人番号から導出できないため、社名からの自動付与はできません。</dd>
-
-          <dt>データはどこに保存されますか？</dt>
-          <dd>照会結果はあなたのスプレッドシートにだけ書き込まれます。公表情報を運営側サーバに保存することはありません（都度取得・都度破棄）。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</dd>
-
-          <dt>何件まで処理できますか？</dt>
-          <dd>Free プランは月50行まで、Pro プランは月10,000行まで（フェアユース上限）です。サイドバーに当月の使用量と残数を常時表示します。</dd>
-
-          <dt>解約方法は？</dt>
-          <dd>Stripe のカスタマーポータルからいつでも解約できます。解約後は次回更新日以降、Free プランに戻ります。</dd>
-
-          <dt>対応しているシートは？</dt>
-          <dd>Google スプレッドシートに対応しています（エディタアドオンとして動作）。Microsoft Excel やスタンドアロンWebアプリには対応していません。</dd>
-        </dl>
-      </div>
-    </section>
-
-    <!-- Marketplaceボタン -->
-    <section id="cta" class="cta">
-      <div class="wrap">
-        <h2>導入する</h2>
-        <p>Google Workspace Marketplace からインストールできます。</p>
-        <!-- TODO: Marketplace掲載後に実URLへ差し替える -->
-        <p><a class="btn" href="#">Marketplace で入手（TODO: 掲載後にURL設定）</a></p>
-      </div>
-    </section>
-
-    <!-- 出典指定文言（handover §8 verbatim・専用セクション） -->
-    <section class="sources">
-      <div class="wrap">
-        <h2>出典・注記</h2>
-        <p>このサービスは、国税庁適格請求書発行事業者公表システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
-        <p>このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
-        <p>出典：経済産業省 Gビズインフォ</p>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="wrap">
-      <nav>
-        <a href="privacy.html">プライバシーポリシー</a>
-        <a href="terms.html">利用規約</a>
-        <a href="tokushoho.html">特定商取引法に基づく表記</a>
-      </nav>
-      <p>&copy; <span>TODO: 運営者名</span> 会社リストクリーナー</p>
     </div>
-  </footer>
+    <p class="pricing-notes">
+      決済は Stripe（クレジットカード）です。購入完了ページにライセンスキーが表示されます。キーを忘れた方は<a href="license-recover.html">こちらから再表示</a>できます。解約後も、当該課金期間の満了まで Pro 機能を利用できます。詳細は<a href="tokushoho.html">特定商取引法に基づく表記</a>をご覧ください。
+    </p>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="block" id="faq">
+  <div class="wrap">
+    <span class="tab-label reveal">FAQ</span>
+    <h2 class="reveal">よくある質問</h2>
+    <div class="faq-list reveal">
+      <details>
+        <summary><span class="faq-q">問</span>T番号がない個人事業主の取引先は確認できますか？<span class="faq-toggle" aria-hidden="true">＋</span></summary>
+        <p class="faq-a">登録番号（T番号）がリストにある場合のみ照会できます。個人事業主の登録番号は法人番号から導出できないため、社名からの自動付与はできません。該当行はステータス列に理由を明記します。</p>
+      </details>
+      <details>
+        <summary><span class="faq-q">問</span>データはどこに保存されますか？<span class="faq-toggle" aria-hidden="true">＋</span></summary>
+        <p class="faq-a">照会結果はあなたのスプレッドシートにだけ書き込まれます。公表情報を運営側サーバに保存することはありません（都度取得・都度破棄）。シートから読み取るのも、あなたが指定した列の値だけです。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</p>
+      </details>
+      <details>
+        <summary><span class="faq-q">問</span>何件まで処理できますか？<span class="faq-toggle" aria-hidden="true">＋</span></summary>
+        <p class="faq-a">Free プランは月50行まで、Pro プランは月10,000行まで（フェアユース上限）です。サイドバーに当月の使用量と残数を常時表示します。上限を超える場合は個別にご相談ください。</p>
+      </details>
+      <details>
+        <summary><span class="faq-q">問</span>解約方法は？<span class="faq-toggle" aria-hidden="true">＋</span></summary>
+        <p class="faq-a">Stripe のカスタマーポータルからいつでも解約できます。解約後も当該課金期間の満了まで Pro 機能を利用でき、その後は Free プランに戻ります。解約導線はアプリ内にも明示しています。</p>
+      </details>
+      <details>
+        <summary><span class="faq-q">問</span>対応しているシートは？<span class="faq-toggle" aria-hidden="true">＋</span></summary>
+        <p class="faq-a">Google スプレッドシートに対応しています（エディタアドオンとして動作）。Microsoft Excel やスタンドアロンのWebアプリには対応していません。</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta-block" id="cta">
+  <div class="wrap">
+    <h2>次の月次から、リスト整備をシートの中で。</h2>
+    <p>Google Workspace Marketplace からインストールできます。まずは無料枠（月50行）で、お手元のリスト10行からお試しください。</p>
+    <a class="btn btn-invert" href="#">Marketplace で入手する</a>
+    <p class="cta-small">※ Marketplace 掲載審査の完了後、こちらのボタンからインストールできるようになります。</p>
+  </div>
+</section>
+
+<!-- ============ 出典・注記 ============ -->
+<section class="sources" id="sources">
+  <div class="wrap">
+    <span class="tab-label">出典・注記</span>
+    <h2>データの出典について</h2>
+    <p>このサービスは、国税庁適格請求書発行事業者公表システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+    <p>このサービスは、国税庁法人番号システムのWeb-API機能を利用して取得した情報をもとに作成しているが、サービスの内容は国税庁によって保証されたものではない</p>
+    <p>出典：経済産業省 Gビズインフォ</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <nav aria-label="規約・ポリシー">
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="terms.html">利用規約</a>
+      <a href="tokushoho.html">特定商取引法に基づく表記</a>
+      <a href="license-recover.html">ライセンスキーの再表示</a>
+    </nav>
+    <p class="copyright">&copy; 2026 会社リストクリーナー</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- スクロールリビール ---- */
+  var reveals = document.querySelectorAll('.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    reveals.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15 });
+    reveals.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---- ヒーローのシート整列アニメーション ----
+     フェーズ: 1=正規化社名 2=法人番号 3=インボイス 4=ステータス */
+  var sheet = document.getElementById('demo-sheet');
+  var fill  = document.getElementById('progress-fill');
+  var label = document.getElementById('progress-label');
+  var cells = sheet.querySelectorAll('td.result');
+
+  function showAll(){
+    cells.forEach(function(td){ td.classList.add('on'); });
+    sheet.classList.add('playing');
+    fill.style.width = '100%';
+    label.textContent = '完了 5/5行（成功3・候補1・エラー1）';
+  }
+
+  if (reduced) { showAll(); return; }
+
+  var PHASES = [
+    { ph:1, at:  900, pct:'25%', text:'正規化中… 5/5行' },
+    { ph:2, at: 2700, pct:'55%', text:'法人番号を解決中…' },
+    { ph:3, at: 4500, pct:'80%', text:'インボイス登録を照会中…' },
+    { ph:4, at: 6100, pct:'100%', text:'完了 5/5行（成功3・候補1・エラー1）' }
+  ];
+  var LOOP_MS = 10000;
+  var timers = [];
+
+  function runLoop(){
+    sheet.classList.remove('playing');
+    cells.forEach(function(td){ td.classList.remove('on'); });
+    fill.style.width = '0%';
+    label.textContent = '処理を開始…';
+    /* リフロー後に再生クラスを付け直す（transition を確実に効かせる） */
+    void sheet.offsetWidth;
+    sheet.classList.add('playing');
+
+    PHASES.forEach(function(p){
+      timers.push(setTimeout(function(){
+        var targets = sheet.querySelectorAll('td.result[data-ph="'+p.ph+'"]');
+        targets.forEach(function(td, i){
+          timers.push(setTimeout(function(){ td.classList.add('on'); }, i*140));
+        });
+        fill.style.width = p.pct;
+        label.textContent = p.text;
+      }, p.at));
+    });
+    timers.push(setTimeout(runLoop, LOOP_MS));
+  }
+
+  /* 画面内にあるときだけ再生（タブ非表示時はブラウザが自動抑制） */
+  var started = false;
+  var heroIo = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting && !started) { started = true; runLoop(); }
+    });
+  }, { threshold: 0.25 });
+  heroIo.observe(sheet);
+})();
+</script>
 </body>
 </html>
