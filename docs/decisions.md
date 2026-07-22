@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-22 §3 clasp 実機疎通完了。standaloneスクリプト作成（scriptId: 1xSDOXaINoYtP9TWvqFHqSEQVevZxu2jJln1Pzwxy8a3bg9s4PwXCUCxr）→ push（dist/appsscript.json のスコープ3点検証通過）→ エディタアドオンのテストデプロイでサイドバー疎通確認（Hello・列指定UI・ライセンス欄・INVOICE_ENABLED=false の「準備中」グレーアウト表示を実機確認）。debugUserKeyProbe を2回実行し R3-1（UserProperties方式）の動作確認完了: userPropertiesReadWrite=ok / keyExistedBeforeProbe=true / stableUserKey=ff6564d0-fc88-47db-a6a2-219f7a660ef2（2回とも同一UUID）/ stableUserKeyIsValidUuid=true。BACKEND_URL未設定のため実行は明示エラー表示（サイレント縮退なしを実機確認）。
+
 - 2026-07-15 [web] 法定ページ（tokushoho/privacy/terms/thanks/license-recover）の運営者情報を実データ化: 運営者名=山本美奈子・連絡先=chanmina143@gmail.com・所在地=「請求があれば遅滞なく開示します」方式・合意管轄=東京地方裁判所（第一審専属）。公開日（privacy/terms）とBACKEND_URL（thanks/license-recover）は据え置き（TODO 4件残置）。
 
 - 2026-07-15 [web] LPを別途用意のデザイン版へ差し替え（縮退公開R3-4の準備中表記・CR-1/2逆検索否定を本文に内包済み。assets/style.cssは法定ページ用に温存）。
