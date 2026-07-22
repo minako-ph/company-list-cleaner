@@ -6,5 +6,8 @@
     "https://www.googleapis.com/auth/spreadsheets.currentonly",
     "https://www.googleapis.com/auth/script.external_request",
     "https://www.googleapis.com/auth/script.container.ui"
+  ],
+  "urlFetchWhitelist": [
+    "https://company-list-cleaner-backend-153788656749.asia-northeast1.run.app/"
   ]
 }
