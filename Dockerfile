@@ -1,7 +1,10 @@
 # backend (Cloud Run) イメージ。
 #
-# 重要: **workspace ルートをビルドコンテキスト**にしてビルドすること。
-#   docker build -f backend/Dockerfile -t company-list-cleaner-backend .
+# 配置: **リポジトリルート**。`gcloud run deploy --source .` はルートの Dockerfile のみを参照する
+# （backend/ 配下に置くと見つけられず Buildpacks にフォールバックして起動失敗する = ERR_PNPM_NO_SCRIPT_OR_SERVER）。
+# ローカルビルドも同ファイルを使う: `docker build -t company-list-cleaner-backend .`
+#
+# 重要: ビルドコンテキストは **workspace ルート**（= このファイルのあるディレクトリ）。
 # build ステージが packages/jp-corp-core などの workspace 依存（workspace:*）を解決するため、
 # ルートの pnpm-lock.yaml / pnpm-workspace.yaml を含む必要がある。
 # node_modules / dist / .env はコンテキストから除外する（.dockerignore 参照）。

@@ -126,18 +126,23 @@ openssl pkey -in license_private.pem -pubout -out license_public.pem
 
 ## Docker ビルド
 
-**workspace ルートをビルドコンテキスト**にする（build ステージが `packages/*` の workspace 依存を
-解決するため。`backend/Dockerfile` 冒頭コメント参照）。runtime ステージは esbuild バンドル
-（`dist/index.js`＋sourcemap）のみで動き、node_modules・packages・package.json をコピーしない。
+Dockerfile は**リポジトリルート**にある（`gcloud run deploy --source .` がルートの Dockerfile のみを
+参照するため。詳細は下記デプロイ節）。ビルドコンテキストも **workspace ルート**にする（build ステージが
+`packages/*` の workspace 依存を解決するため。ルートの `Dockerfile` 冒頭コメント参照）。runtime ステージは
+esbuild バンドル（`dist/index.js`＋sourcemap）のみで動き、node_modules・packages・package.json をコピーしない。
 
 ```
-docker build -f backend/Dockerfile -t company-list-cleaner-backend .
+docker build -t company-list-cleaner-backend .
 ```
 
 ## Cloud Run デプロイ（R3-5 の固定値）
 
 region・インスタンス数は追補 R3-5 で確定。**全ユーザー横断の直列性**を `max-instances=1` で担保し、
 コスト優先で `min-instances=0`（コールドスタートはサイドバー側「接続中…」表示で吸収 = N-4 の思想）。
+
+`--source .` はリポジトリ**ルートの `Dockerfile`** を使ってイメージをビルドする（Dockerfile が無いと
+Buildpacks にフォールバックし、pnpm workspace を解決できず `ERR_PNPM_NO_SCRIPT_OR_SERVER` で起動失敗する）。
+コマンドはリポジトリルートで実行すること。
 
 ```
 gcloud run deploy company-list-cleaner-backend \
