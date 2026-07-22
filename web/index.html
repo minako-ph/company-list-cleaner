@@ -110,6 +110,10 @@ h1 .kw{
   background:linear-gradient(transparent 62%, var(--green-cell) 62%);
   padding:0 2px;
 }
+h1 .h1-app{
+  display:block;font-size:clamp(18px,2.2vw,26px);font-weight:700;
+  color:var(--green-deep);letter-spacing:.08em;margin-bottom:16px;
+}
 .hero-lead{max-width:38em;font-size:clamp(15px,1.6vw,17.5px);color:#33443C;margin-bottom:14px}
 .hero-audience{font-size:13.5px;color:var(--ink-muted);margin-bottom:30px}
 .hero-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:16px}
@@ -419,9 +423,10 @@ details[open] .faq-toggle{transform:rotate(45deg)}
 <div class="hero" id="top">
   <div class="wrap">
     <span class="hero-eyebrow">Google Sheets™ エディタアドオン</span>
-    <h1>取引先リストの整備を、<br><span class="kw">スプレッドシートから出ずに。</span></h1>
+    <h1><span class="h1-app">会社リストクリーナー</span>取引先リストの整備を、<br><span class="kw">スプレッドシートから出ずに。</span></h1>
     <p class="hero-lead">
-      社名の表記ゆれ統一・法人番号の自動付与・インボイス登録の一括確認を、公式データだけで。
+      会社リストクリーナーは、Google スプレッドシート上で取引先リストを整備するエディタアドオンです。
+      社名の表記ゆれ統一（正規化）・法人番号の自動付与・インボイス登録の一括確認を、国税庁・gBizINFO の公式データだけで行います。
       エクスポートして、別ツールに通して、また取り込む——そのループを、いつものシートの上で終わらせます。
     </p>
     <p class="hero-audience">中小企業の経理・営業・バックオフィス担当の方へ。</p>

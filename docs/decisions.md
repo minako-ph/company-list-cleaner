@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-22 [OAuth審査] ブランディング自動チェック2指摘（ホームページに目的説明なし・アプリ名不一致）への対応: web/index.html の h1 冒頭にアプリ名「会社リストクリーナー」を明示（`.h1-app` 小見出し・デザイン維持）、h1 直後のリード文を「Google スプレッドシート上で取引先リストを整備するエディタアドオン」という目的文から始まる構成に変更。料金・正直明記等の既存文言は不変。
+
 - 2026-07-22 [deploy] 確定URLをプレースホルダへ差替え: appsscript.json に urlFetchWhitelist（Cloud Run バックエンドドメイン・`/`終端）を追加（oauthScopes 3点は不変=CR-7・scope check source/dist緑）、sidebar.html の3リンク（アップグレード=Stripe Payment Link / 解約=カスタマーポータル / キー再表示=pelmoalabs.com）、web/thanks.html・license-recover.html の `BACKEND_URL` に Cloud Run URL を設定。公開日（privacy/terms）・INVOICE_ENABLED・確定値は据え置き。反映には手動 clasp push が必要。
 
 - 2026-07-22 [deploy] Cloud Run `--source .` はルートの Dockerfile のみ参照するため、`backend/Dockerfile` をリポジトリルートへ移動（`git mv` で履歴保持）。二重管理を避けるため2ファイル併存にせず単一ファイル化し、README のローカルビルド手順を `docker build -t … .`（ルート参照）へ書き換え。Buildpacksフォールバックによる `ERR_PNPM_NO_SCRIPT_OR_SERVER`（実機確認）を解消。中身（build→esbuildバンドル→runtimeは単一バンドルのみ）は不変。
