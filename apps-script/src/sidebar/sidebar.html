@@ -230,9 +230,15 @@
       <select id="corp-col"></select>
       <label for="reg-col">登録番号の列（任意・T番号）</label>
       <select id="reg-col"></select>
+      <p id="header-empty-note" class="muted hidden">
+        シートの1行目に見出しが見つかりません。列見出しとデータを入力してから［シートを読み直す］を押してください。
+      </p>
       <p class="muted">
         ヘッダー名から自動推定した初期値です。必要に応じて修正してください。
       </p>
+      <div class="btn-row">
+        <button id="reload-btn" type="button" class="secondary">シートを読み直す</button>
+      </div>
     </section>
 
     <!-- 3. 付与オプション -->
@@ -435,6 +441,13 @@
         function columnLabel(header, index) {
           var name = header && String(header).trim() !== '' ? String(header) : '(無題)';
           return String(index + 1) + '列目: ' + name;
+        }
+
+        // 1行目に実質的な見出し（空白でない値）が1つでもあるか。
+        function hasUsableHeaders(headers) {
+          return (headers || []).some(function (h) {
+            return String(h == null ? '' : h).trim() !== '';
+          });
         }
 
         function populateSelect(select, headers, selectedCol, allowNone) {
@@ -770,6 +783,13 @@
           populateSelect($('corp-col'), headers, init.mapping.corpNumCol, true);
           populateSelect($('reg-col'), headers, init.mapping.regNumCol, true);
 
+          // 1行目に実質的な見出しが無ければ案内を出す（空シートで開いたケース）。
+          if (hasUsableHeaders(headers)) {
+            $('header-empty-note').classList.add('hidden');
+          } else {
+            $('header-empty-note').classList.remove('hidden');
+          }
+
           // インボイス機能フラグ（無効時は disabled ＋「準備中」）。
           if (!init.invoiceEnabled) {
             $('opt-invoice').checked = false;
@@ -806,6 +826,33 @@
             });
         }
 
+        // 「シートを読み直す」: getSidebarInit を再取得して applyInit で再描画する。
+        // 空シートで開いて後からデータを入力したケースを、開き直しなしで反映するための明示操作
+        // （window.onfocus 等の自動再読込は挙動が読みにくいため採用しない）。
+        function reloadInit() {
+          var btn = $('reload-btn');
+          if (btn.disabled) return; // 二重押し防止
+          var original = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = '読み込み中…';
+          clearBanner(); // 前回の一時的なエラー表示を消してから再取得
+          call('getSidebarInit')
+            .then(function (init) {
+              applyInit(init); // usageError / degraded があれば applyInit が再表示する
+              btn.textContent = '更新しました';
+              setTimeout(function () {
+                btn.textContent = original;
+                btn.disabled = false;
+              }, 1500);
+            })
+            .catch(function (e) {
+              // サイレント縮退禁止。失敗は明示する。
+              showBanner('シートの再読み込みに失敗しました: ' + (e && e.message ? e.message : e));
+              btn.textContent = original;
+              btn.disabled = false;
+            });
+        }
+
         // イベント配線
         $('run-btn').addEventListener('click', function () {
           runBatches(rowRange());
@@ -817,6 +864,7 @@
         });
         $('license-save').addEventListener('click', saveLicense);
         $('license-clear').addEventListener('click', clearLicense);
+        $('reload-btn').addEventListener('click', reloadInit);
 
         boot();
       })();
