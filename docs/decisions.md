@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-23 [OAuth審査] web/index.html の `<title>` を OAuth同意画面のアプリ名と完全一致させるため「会社リストクリーナー」のみに短縮（ブランド確認の「アプリ名不一致」指摘が h1修正=baa7f37 後も継続のため、Googleの自動チェックが title を参照している可能性を切り分け）。meta description・h1 は不変。**TODO: OAuth審査通過後に title へサブタイトル「 — インボイス登録確認・法人番号付与 for Google Sheets」を戻す（SEO用）**。
+
 - 2026-07-22 [OAuth審査] ブランディング自動チェック2指摘（ホームページに目的説明なし・アプリ名不一致）への対応: web/index.html の h1 冒頭にアプリ名「会社リストクリーナー」を明示（`.h1-app` 小見出し・デザイン維持）、h1 直後のリード文を「Google スプレッドシート上で取引先リストを整備するエディタアドオン」という目的文から始まる構成に変更。料金・正直明記等の既存文言は不変。
 
 - 2026-07-22 [deploy] 確定URLをプレースホルダへ差替え: appsscript.json に urlFetchWhitelist（Cloud Run バックエンドドメイン・`/`終端）を追加（oauthScopes 3点は不変=CR-7・scope check source/dist緑）、sidebar.html の3リンク（アップグレード=Stripe Payment Link / 解約=カスタマーポータル / キー再表示=pelmoalabs.com）、web/thanks.html・license-recover.html の `BACKEND_URL` に Cloud Run URL を設定。公開日（privacy/terms）・INVOICE_ENABLED・確定値は据え置き。反映には手動 clasp push が必要。
