@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 [web] 運営者表記を屋号 pelmoalabs へ統一（web/ 5ファイル6箇所＋footer© 全6ページ「© pelmoalabs 会社リストクリーナー」）。氏名は特商法の請求開示方式（消費者庁 通信販売広告Q&A A15）で非表示化——tokushoho.html に「氏名・住所・電話番号はご請求いただければ遅滞なく電子メールにて開示」を明記（根拠URLはHTMLコメント）。**開示請求受領時はメールで遅滞なく氏名を開示する運用義務が残る**。privacy §7/§8・取引条件・確定値は不変。
+
 - 2026-07-24 [課金E2E] `/license/claim`・`/license/recover` に hono/cors を適用（quote-invoice-maker f8d9954 同型移植）。web/thanks.html・license-recover.html が別オリジン（pelmoalabs.com/GitHub Pages）から `*.run.app` へ content-type: application/json で POST するためプリフライトが必ず発生し、修正前は OPTIONS が404で決済後キー表示が100%失敗していた（実機確認）。origin 既定 '*'・credentials なし（認可の実体は sessionId／email＋IPクールダウンでありCORSは境界ではない）。`app.use` は license/gateway未設定時503の early return より前に登録し503応答にもACAOが付くことをテスト＋実機（204/503＋ACAO）で確認。`/license/verify`（GAS↔UrlFetchAppのサーバ間）・`/stripe/webhook`（Stripe署名検証）には付けない。テスト4件追加（backend 153→157）。
 
 - 2026-07-24 [OAuth審査] プライバシーポリシー指摘「センシティブデータの保護メカニズム未規定」に対応し、web/privacy.html に §7「データ保護のための措置」（TLS暗号化・Firestore/Secret Manager保管時暗号化・公表情報非保存/ライセンスJWT非保存・アクセス制御/IAM/2FA・Cloud Loggingの一定期間保持後削除・利用量データの削除請求先）と §8 Limited Use開示（Google API Services User Data Policy準拠）を追加、既存§7〜9を§9〜11へ繰下げ。記述は実装/README/decisionsで検証済み事実に限定（保持期間は「一定期間」）。**IAM最小権限・2段階認証はリポジトリから検証不能な運用事実＝運営者の申告に基づく（公開前に実在を要確認）**。公開日TODO据え置き・CR-3/CR-5と矛盾なし。
