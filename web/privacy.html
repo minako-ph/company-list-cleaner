@@ -83,16 +83,55 @@
         公表情報（照会結果の内容）を含みません。
       </p>
 
-      <h2>7. 第三者提供</h2>
+      <h2>7. データ保護のための措置</h2>
+      <p>本サービスは、取り扱う情報を保護するために以下の措置を講じています。</p>
+      <ul>
+        <li>
+          <strong>通信の暗号化:</strong> お客様のスプレッドシートと運営バックエンドの間、および運営バックエンドと
+          公的API（国税庁・gBizINFO）・決済事業者（Stripe）の間の通信は、すべて TLS（HTTPS）で暗号化されます。
+        </li>
+        <li>
+          <strong>保管データの保護:</strong> 運営バックエンドは Google Cloud（Cloud Run・東京リージョン asia-northeast1）上で稼働します。
+          無料枠管理のための利用量データは Cloud Firestore に保存され、Google Cloud により保管時に暗号化されます。
+          公的APIのアプリケーションIDや決済・署名用の秘密情報は Google Secret Manager に暗号化して保管し、
+          プログラムコードやソースコードリポジトリには含めません。
+        </li>
+        <li>
+          <strong>保存しないデータ:</strong> 公的APIから取得した公表情報は保存しません（都度取得・都度破棄。上記「2」）。
+          有料プランのライセンスキーは Ed25519 署名の JWT（署名付きトークン）であり、キー自体をデータベースに保存しない設計です。
+        </li>
+        <li>
+          <strong>アクセス制御:</strong> 運営バックエンドおよび保管データにアクセスできるのは運営者本人のみです。
+          Google Cloud の権限管理（IAM）により最小権限に基づいて構成し、管理コンソールへのアクセスは2段階認証で保護しています。
+        </li>
+        <li>
+          <strong>アクセスログの保持と削除:</strong> 上記「3」の3点のみを記録するアクセスログは、Google Cloud Logging に
+          一定期間保持された後、自動的に削除されます。
+        </li>
+        <li>
+          <strong>データ削除のご請求:</strong> お客様のご請求に応じて、当該お客様の利用量データを削除します。
+          ご希望の場合は、下記のお問い合わせ先（chanmina143@gmail.com）までご連絡ください。
+        </li>
+      </ul>
+
+      <h2>8. Google API から取得した情報の利用（Limited Use）</h2>
+      <p>
+        本サービスによる Google API から受け取った情報の使用および他アプリケーションへの転送は、
+        Limited Use requirements を含む
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>
+        に準拠します。
+      </p>
+
+      <h2>9. 第三者提供</h2>
       <p>
         法令に基づく場合を除き、お客様の情報を第三者に提供しません。公的API（国税庁・gBizINFO）および決済事業者（Stripe）への
         必要な通信は、本サービスの提供に不可欠な範囲で行います。
       </p>
 
-      <h2>8. お問い合わせ先</h2>
+      <h2>10. お問い合わせ先</h2>
       <p>chanmina143@gmail.com</p>
 
-      <h2>9. 改定</h2>
+      <h2>11. 改定</h2>
       <p>本ポリシーは必要に応じて改定することがあります。重要な変更がある場合は本ページで告知します。</p>
 
       <hr>

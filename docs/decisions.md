@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 [OAuth審査] プライバシーポリシー指摘「センシティブデータの保護メカニズム未規定」に対応し、web/privacy.html に §7「データ保護のための措置」（TLS暗号化・Firestore/Secret Manager保管時暗号化・公表情報非保存/ライセンスJWT非保存・アクセス制御/IAM/2FA・Cloud Loggingの一定期間保持後削除・利用量データの削除請求先）と §8 Limited Use開示（Google API Services User Data Policy準拠）を追加、既存§7〜9を§9〜11へ繰下げ。記述は実装/README/decisionsで検証済み事実に限定（保持期間は「一定期間」）。**IAM最小権限・2段階認証はリポジトリから検証不能な運用事実＝運営者の申告に基づく（公開前に実在を要確認）**。公開日TODO据え置き・CR-3/CR-5と矛盾なし。
+
 - 2026-07-23 [§9 UX] 空シートで先にサイドバーを開くと列プルダウンが空のまま反映されない問題に対応（sidebar.htmlのみ）: 「シートを読み直す」ボタン追加（getSidebarInit再取得→既存applyInitで再描画・実行中disabledで二重押し防止・「読み込み中…」→「更新しました」表示・失敗はshowBannerで明示＝サイレント縮退禁止）＋ヘッダー空時の案内（hasUsableHeadersで判定しapplyInitでトグル）。自動再読込（window.onfocus等）は挙動が読みにくいため不採用。getSidebarInitのシグネチャ・戻り値は不変。要clasp push。
 
 - 2026-07-23 [OAuth審査] web/index.html の `<title>` を OAuth同意画面のアプリ名と完全一致させるため「会社リストクリーナー」のみに短縮（ブランド確認の「アプリ名不一致」指摘が h1修正=baa7f37 後も継続のため、Googleの自動チェックが title を参照している可能性を切り分け）。meta description・h1 は不変。**TODO: OAuth審査通過後に title へサブタイトル「 — インボイス登録確認・法人番号付与 for Google Sheets」を戻す（SEO用）**。
