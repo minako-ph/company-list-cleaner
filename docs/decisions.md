@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-07-24 公開リポジトリのため過去行の氏名表記を屋号へ編集（gitコミット履歴には残存・許容）
+
 - 2026-07-24 [web] 運営者表記を屋号 pelmoalabs へ統一（web/ 5ファイル6箇所＋footer© 全6ページ「© pelmoalabs 会社リストクリーナー」）。氏名は特商法の請求開示方式（消費者庁 通信販売広告Q&A A15）で非表示化——tokushoho.html に「氏名・住所・電話番号はご請求いただければ遅滞なく電子メールにて開示」を明記（根拠URLはHTMLコメント）。**開示請求受領時はメールで遅滞なく氏名を開示する運用義務が残る**。privacy §7/§8・取引条件・確定値は不変。
 
 - 2026-07-24 [課金E2E] `/license/claim`・`/license/recover` に hono/cors を適用（quote-invoice-maker f8d9954 同型移植）。web/thanks.html・license-recover.html が別オリジン（pelmoalabs.com/GitHub Pages）から `*.run.app` へ content-type: application/json で POST するためプリフライトが必ず発生し、修正前は OPTIONS が404で決済後キー表示が100%失敗していた（実機確認）。origin 既定 '*'・credentials なし（認可の実体は sessionId／email＋IPクールダウンでありCORSは境界ではない）。`app.use` は license/gateway未設定時503の early return より前に登録し503応答にもACAOが付くことをテスト＋実機（204/503＋ACAO）で確認。`/license/verify`（GAS↔UrlFetchAppのサーバ間）・`/stripe/webhook`（Stripe署名検証）には付けない。テスト4件追加（backend 153→157）。
@@ -18,7 +20,7 @@
 
 - 2026-07-22 §3 clasp 実機疎通完了。standaloneスクリプト作成（scriptId: 1xSDOXaINoYtP9TWvqFHqSEQVevZxu2jJln1Pzwxy8a3bg9s4PwXCUCxr）→ push（dist/appsscript.json のスコープ3点検証通過）→ エディタアドオンのテストデプロイでサイドバー疎通確認（Hello・列指定UI・ライセンス欄・INVOICE_ENABLED=false の「準備中」グレーアウト表示を実機確認）。debugUserKeyProbe を2回実行し R3-1（UserProperties方式）の動作確認完了: userPropertiesReadWrite=ok / keyExistedBeforeProbe=true / stableUserKey=ff6564d0-fc88-47db-a6a2-219f7a660ef2（2回とも同一UUID）/ stableUserKeyIsValidUuid=true。BACKEND_URL未設定のため実行は明示エラー表示（サイレント縮退なしを実機確認）。
 
-- 2026-07-15 [web] 法定ページ（tokushoho/privacy/terms/thanks/license-recover）の運営者情報を実データ化: 運営者名=山本美奈子・連絡先=chanmina143@gmail.com・所在地=「請求があれば遅滞なく開示します」方式・合意管轄=東京地方裁判所（第一審専属）。公開日（privacy/terms）とBACKEND_URL（thanks/license-recover）は据え置き（TODO 4件残置）。
+- 2026-07-15 [web] 法定ページ（tokushoho/privacy/terms/thanks/license-recover）の運営者情報を実データ化: 運営者名=屋号pelmoalabs（氏名は非公開）・連絡先=chanmina143@gmail.com・所在地=「請求があれば遅滞なく開示します」方式・合意管轄=東京地方裁判所（第一審専属）。公開日（privacy/terms）とBACKEND_URL（thanks/license-recover）は据え置き（TODO 4件残置）。
 
 - 2026-07-15 [web] LPを別途用意のデザイン版へ差し替え（縮退公開R3-4の準備中表記・CR-1/2逆検索否定を本文に内包済み。assets/style.cssは法定ページ用に温存）。
 
