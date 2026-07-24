@@ -288,3 +288,46 @@ describe('/usage の Pro 上限切替（licenseKey→plan 解決）', () => {
     vi.useRealTimers();
   });
 });
+
+describe('CORS（F-1: claim/recover のみ・thanks/license-recover のブラウザfetch用）', () => {
+  // 実配線（routes/index.ts の registerLicenseAndWebhookFromConfig）を検証するため createApp を使う。
+  // Stripe/署名鍵 未設定でも cors の use 登録は 503 分岐より前のため効くこと（503にもACAOが付く）を確認する。
+
+  it('OPTIONS /license/claim はプリフライト成功（204＋Access-Control-Allow-Origin）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await app.request('/license/claim', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://pelmoalabs.com',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('POST /license/claim の応答に Access-Control-Allow-Origin が付く（未設定時503でも）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await post(app, '/license/claim', { sessionId: 'sess_1' }, { origin: 'https://pelmoalabs.com' });
+    expect(res.status).toBe(503);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('POST /license/recover の応答に Access-Control-Allow-Origin が付く（未設定時503でも）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await post(app, '/license/recover', { email: 'a@example.com' }, { origin: 'https://pelmoalabs.com' });
+    expect(res.status).toBe(503);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('POST /license/verify には CORS ヘッダを付けない（GASサーバ間通信のみ）', async () => {
+    const { createApp } = await import('../src/app.js');
+    const app = createApp();
+    const res = await post(app, '/license/verify', { licenseKey: 'x' }, { origin: 'https://pelmoalabs.com' });
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+});

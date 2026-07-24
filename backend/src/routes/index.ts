@@ -1,4 +1,5 @@
 import type { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { GovHttpClient } from '@jp-opendata/gov-clients/http';
 import { HoujinClient } from '@jp-opendata/gov-clients/houjin';
 import { GbizinfoClient } from '@jp-opendata/gov-clients/gbizinfo';
@@ -250,6 +251,14 @@ function registerLicenseAndWebhookFromConfig(
   license: LicenseService | undefined,
   gateway: StripeGateway | undefined,
 ): void {
+  // CORS は /license/claim・/license/recover のみに適用する（thanks.html・license-recover.html が
+  // GitHub Pages＝別オリジンからブラウザ fetch するため。content-type: application/json でプリフライトが
+  // 必ず発生する）。origin 既定 '*'・credentials なし＝認可の実体は sessionId／email＋IPクールダウンであり
+  // CORS は境界ではない。/license/verify は GAS サーバ間通信（UrlFetchApp）、/stripe/webhook は Stripe
+  // からの署名付き通信のため付けない。**未設定時503の early return 側にも効くよう、分岐より前に登録する。**
+  app.use('/license/claim', cors());
+  app.use('/license/recover', cors());
+
   if (license === undefined || gateway === undefined) {
     const unavailable = { error: 'not_configured', message: 'ライセンス機能は現在利用できません' };
     for (const path of ['/license/claim', '/license/recover', '/license/verify']) {
