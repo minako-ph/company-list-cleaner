@@ -1,5 +1,7 @@
 # decisions.md — 実装中の判断ログ（1行/件、新しいものを上に）
 
+- 2026-08-10 [FR-5解禁・web] Web-API正式利用可に伴いLP（web/index.html）の縮退表記R3-4を解除: ヒーローの「ご案内: インボイス登録確認は…準備中」注意書きと列一覧注記の「承認手続完了後に利用可能」文を削除（未使用化した `.hero-note` CSSも削除）。CR-1/2逆検索否定・料金・「できないこと」等の本文は不変。Open Design側 `company-list-cleaner-lp` も同期済み。
+
 - 2026-08-10 [FR-5解禁] 国税庁が2026-07-24付でインボイスWeb-API利用可を正式回答→検証環境で照合テスト全観点グリーン（取消判定・not_found・パース一致・CR-5ログ3点を実データ確認）→本番バックエンドを`INVOICE_ENABLED=true`で再デプロイ済みのため、サイドバーの「準備中」縮退表示を解除。**あわせてUIゲートの設計を変更**: 従来はGAS Script Property `INVOICE_ENABLED`（既定false）とbackend envの二重フラグでドリフトする構造だったため、Script Propertyを廃止し **backend `/health` に `invoiceEnabled`（envの値）を追加してUIを連動**（承認状態とUIの自動整合）。`/health`不達・旧バックエンド応答時は有効側フォールバック（権威ゲートはbackendの503→processBatchが「準備中」を書く既存経路。誤った「準備中」常時表示の方が有害）。applyInitは再読込での復帰も対称化。スコープ3点不変。**反映には clasp push＋backend再デプロイ（/healthフィールド追加）の両方が必要**。
 
 - 2026-07-24 公開リポジトリのため過去行の氏名表記を屋号へ編集（gitコミット履歴には残存・許容）
