@@ -790,11 +790,15 @@
             $('header-empty-note').classList.remove('hidden');
           }
 
-          // インボイス機能フラグ（無効時は disabled ＋「準備中」）。
+          // インボイス機能フラグ（backend /health 連動。無効時は disabled ＋「準備中」）。
+          // 「シートを読み直す」で状態が変わりうるため、有効時の復帰も対称に行う。
           if (!init.invoiceEnabled) {
             $('opt-invoice').checked = false;
             $('opt-invoice').disabled = true;
             $('opt-invoice-note').classList.remove('hidden');
+          } else {
+            $('opt-invoice').disabled = false;
+            $('opt-invoice-note').classList.add('hidden');
           }
 
           if (init.usage) {

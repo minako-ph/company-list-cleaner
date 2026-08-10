@@ -4,7 +4,8 @@
  * - アクティブシート名・ヘッダー行・データ範囲・ヘッダー名
  * - 列マッピングの自動推定（FR-1）
  * - 使用量（FR-9）・ライセンス状態（FR-10）
- * - インボイス機能の有効/無効（INVOICE_ENABLED。無効時は UI で disabled ＋ 準備中表示）
+ * - インボイス機能の有効/無効（backend /health の invoiceEnabled に連動。無効時は UI で
+ *   disabled ＋ 準備中表示。GAS 側に独立フラグを持たない＝承認状態とUIの自動整合）
  *
  * 各サブ取得は try/catch で分離し、一部の失敗（バックエンド障害）で UI 全体を壊さない（N-4）。
  */
@@ -15,9 +16,6 @@ import { getUsage } from './usage';
 import { getLicenseStatus, type LicenseStatus } from './license';
 import * as backendClient from './backendClient';
 import type { BackendHealth, Usage } from './backendDto';
-
-/** Script Property のキー名（インボイス機能フラグ）。 */
-const INVOICE_ENABLED_PROP = 'INVOICE_ENABLED';
 
 /** サイドバー初期化情報。 */
 export interface SidebarInit {
@@ -41,12 +39,6 @@ export interface SidebarInit {
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-/** INVOICE_ENABLED（Script Property）が 'true' かどうか。既定は false（縮退公開）。 */
-function getInvoiceEnabled(): boolean {
-  const value = PropertiesService.getScriptProperties().getProperty(INVOICE_ENABLED_PROP);
-  return value !== null && value.trim().toLowerCase() === 'true';
 }
 
 /** サイドバー初期化情報を返す。 */
@@ -86,6 +78,12 @@ export function getSidebarInit(): SidebarInit {
     apiHealth = null;
   }
 
+  // インボイス機能フラグは backend /health の invoiceEnabled に連動（envのINVOICE_ENABLEDが真実源）。
+  // /health 不達・フィールド未対応の旧バックエンドは true 扱い（有効側フォールバック）:
+  // UIの事前ゲートは補助であり、権威ゲートはバックエンドの503（processBatch が「準備中」を
+  // 書き込む既存経路）。誤って「準備中」を出し続ける方が承認済み状態との不整合として有害なため。
+  const invoiceEnabled = apiHealth === null ? true : (apiHealth.invoiceEnabled ?? true);
+
   return {
     sheetName,
     headerRow,
@@ -93,7 +91,7 @@ export function getSidebarInit(): SidebarInit {
     endRow,
     headers,
     mapping,
-    invoiceEnabled: getInvoiceEnabled(),
+    invoiceEnabled,
     usage,
     usageError,
     license,

@@ -133,6 +133,15 @@ describe('parseHealth（N-4 障害表示）', () => {
     ).toEqual({ ok: true, apis: { houjin: 'ok', gbizinfo: 'degraded', invoice: 'ok' } });
   });
 
+  it('invoiceEnabled は boolean のみ受理（true/false を透過・欠落/非boolean は undefined）', () => {
+    const apis = { houjin: 'ok', gbizinfo: 'ok', invoice: 'ok' };
+    expect(parseHealth({ ok: true, invoiceEnabled: true, apis }).invoiceEnabled).toBe(true);
+    expect(parseHealth({ ok: true, invoiceEnabled: false, apis }).invoiceEnabled).toBe(false);
+    // フィールド未対応の旧バックエンド応答 → undefined（有効/無効の既定は呼び出し側の責務）
+    expect(parseHealth({ ok: true, apis }).invoiceEnabled).toBeUndefined();
+    expect(parseHealth({ ok: true, invoiceEnabled: 'true', apis }).invoiceEnabled).toBeUndefined();
+  });
+
   it('apis 欠落・不正値は全て ok に落とし、ok は既定 false', () => {
     expect(parseHealth({})).toEqual({
       ok: false,

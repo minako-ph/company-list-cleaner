@@ -108,6 +108,11 @@ export type ApiHealthState = 'ok' | 'degraded';
 /** GET /health の応答（N-4 サイドバー障害表示用）。 */
 export interface BackendHealth {
   readonly ok: boolean;
+  /**
+   * インボイス機能フラグ（backend env INVOICE_ENABLED）。UIゲートはこの値に連動する。
+   * フィールド未対応の旧バックエンド応答では undefined（呼び出し側でフォールバック）。
+   */
+  readonly invoiceEnabled?: boolean;
   readonly apis: {
     readonly houjin: ApiHealthState;
     readonly gbizinfo: ApiHealthState;
@@ -138,6 +143,13 @@ function getNumber(o: unknown, key: string): number | undefined {
 function getBoolean(o: unknown, key: string): boolean {
   if (!isObject(o)) return false;
   return Reflect.get(o, key) === true;
+}
+
+/** boolean 値のみを受理し、欠落・非booleanは undefined を返す（既定値は呼び出し側の責務）。 */
+function getOptionalBoolean(o: unknown, key: string): boolean | undefined {
+  if (!isObject(o)) return undefined;
+  const value: unknown = Reflect.get(o, key);
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function getArray(o: unknown, key: string): unknown[] {
@@ -347,8 +359,10 @@ function parseApiHealthState(o: unknown, key: string): ApiHealthState {
 /** `BackendHealth`（GET /health）をパースする。 */
 export function parseHealth(body: unknown): BackendHealth {
   const apis = isObject(body) ? Reflect.get(body, 'apis') : undefined;
+  const invoiceEnabled = getOptionalBoolean(body, 'invoiceEnabled');
   return {
     ok: getBoolean(body, 'ok'),
+    ...(invoiceEnabled !== undefined ? { invoiceEnabled } : {}),
     apis: {
       houjin: parseApiHealthState(apis, 'houjin'),
       gbizinfo: parseApiHealthState(apis, 'gbizinfo'),

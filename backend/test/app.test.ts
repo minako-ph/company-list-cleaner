@@ -7,9 +7,10 @@ describe('createApp', () => {
     const res = await app.request('/health');
     expect(res.status).toBe(200);
     const body: unknown = await res.json();
-    // 起動直後は失敗記録がないため全ソース ok。
+    // 起動直後は失敗記録がないため全ソース ok。テスト環境は INVOICE_ENABLED 未設定＝false（縮退既定）。
     expect(body).toEqual({
       ok: true,
+      invoiceEnabled: false,
       apis: { houjin: 'ok', gbizinfo: 'ok', invoice: 'ok' },
     });
   });

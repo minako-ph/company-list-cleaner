@@ -66,7 +66,11 @@ export function registerRoutes(app: Hono): void {
   });
 
   // /health はサイドバー障害表示用に各ソースの degraded 状態を返す（N-4）。
-  app.get('/health', (c) => c.json({ ok: true, apis: health.getStatus() }));
+  // invoiceEnabled: インボイス機能フラグ（env INVOICE_ENABLED）。サイドバーのUIゲートは
+  // この値に連動する（GAS側に独立フラグを持たず、承認状態とUIを自動整合させる）。
+  app.get('/health', (c) =>
+    c.json({ ok: true, invoiceEnabled: config.invoiceEnabled, apis: health.getStatus() }),
+  );
 
   registerInvoiceRouteFromConfig(app, config, queue, health);
   registerResolveRouteFromConfig(app, config, queue, health);
