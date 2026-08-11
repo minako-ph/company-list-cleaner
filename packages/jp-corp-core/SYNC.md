@@ -35,16 +35,16 @@
 
 ```sh
 # 1. 柱2側で対象パッケージの split ブランチを作る（読み取りのみ・作業ツリーに影響なし）
-cd /Users/minako-yamamoto/s/jp-opendata-actors
+cd /Users/minako-yamamoto/s/pelmoalabs/jp-opendata-actors
 git subtree split --prefix=packages/<柱2prefix> -b split-<柱2prefix>-for-pillar3
 
 # 2. 柱3側で subtree pull（初回のみ subtree add）
-cd /Users/minako-yamamoto/s/company-list-cleaner
+cd /Users/minako-yamamoto/s/pelmoalabs/company-list-cleaner
 git subtree pull --prefix=packages/<柱3ディレクトリ> \
-  /Users/minako-yamamoto/s/jp-opendata-actors split-<柱2prefix>-for-pillar3
+  /Users/minako-yamamoto/s/pelmoalabs/jp-opendata-actors split-<柱2prefix>-for-pillar3
 
 # 3. 後片付けと記録
-cd /Users/minako-yamamoto/s/jp-opendata-actors && git branch -D split-<柱2prefix>-for-pillar3
+cd /Users/minako-yamamoto/s/pelmoalabs/jp-opendata-actors && git branch -D split-<柱2prefix>-for-pillar3
 # → 本ファイルの取込み履歴に1行追記（対象・取込元HEADとsplitコミットのハッシュ）
 # → pnpm install && pnpm typecheck && pnpm test で緑を確認
 ```
